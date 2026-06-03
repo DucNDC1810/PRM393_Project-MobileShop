@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../theme/app_theme.dart';
 import '../widgets/shop_logo.dart';
 import 'main_shell.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -410,7 +411,9 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                      ),
                       child: const Text(
                         'Đăng ký ngay',
                         style: TextStyle(
