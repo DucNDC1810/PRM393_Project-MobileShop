@@ -3,9 +3,7 @@ import '../theme/app_theme.dart';
 import '../widgets/shop_logo.dart';
 
 class SplashScreen extends StatefulWidget {
-  final Future<void> Function() onInit;
-
-  const SplashScreen({super.key, required this.onInit});
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();

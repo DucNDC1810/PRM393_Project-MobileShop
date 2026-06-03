@@ -267,20 +267,23 @@ class ProfileScreen extends StatelessWidget {
             final isLast = e.key == items.length - 1;
             return Column(
               children: [
-                ListTile(
-                  dense: true,
-                  leading: Icon(e.value.icon, color: AppColors.primary, size: 22),
-                  title: Text(
-                    e.value.label,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.onSurface,
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    dense: true,
+                    leading: Icon(e.value.icon, color: AppColors.primary, size: 22),
+                    title: Text(
+                      e.value.label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.onSurface,
+                      ),
                     ),
+                    trailing: const Icon(Icons.chevron_right,
+                        color: AppColors.onSurfaceVariant, size: 20),
+                    onTap: e.value.onTap,
                   ),
-                  trailing: const Icon(Icons.chevron_right,
-                      color: AppColors.onSurfaceVariant, size: 20),
-                  onTap: e.value.onTap,
                 ),
                 if (!isLast)
                   const Divider(
