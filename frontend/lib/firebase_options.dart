@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'prm393-mobileshop.firebasestorage.app',
     measurementId: 'G-G4DP53GF3L',
   );
+
 }
