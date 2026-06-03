@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/product_card.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -10,441 +9,627 @@ class ProductsScreen extends StatefulWidget {
 }
 
 class _ProductsScreenState extends State<ProductsScreen> {
-  bool _isGridView = true;
-  String _sortBy = 'popular';
+  int _selectedCategory = 0;
+  final _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _products = [
-    {
-      'name': 'Kem dưỡng ẩm Rose Glow',
-      'brand': 'Luminous Bloom',
-      'price': 450000,
-      'originalPrice': 590000,
-      'rating': 4.8,
-      'reviews': 234,
-      'emoji': '🌹',
-      'tag': 'Bán chạy',
-    },
-    {
-      'name': 'Son môi Velvet Bloom',
-      'brand': 'Beauty & Glow',
-      'price': 285000,
-      'originalPrice': null,
-      'rating': 4.6,
-      'reviews': 128,
-      'emoji': '💄',
-      'tag': 'Mới',
-    },
-    {
-      'name': 'Serum vitamin C sáng da',
-      'brand': 'Glow Lab',
-      'price': 620000,
-      'originalPrice': 780000,
-      'rating': 4.9,
-      'reviews': 512,
-      'emoji': '✨',
-      'tag': '-20%',
-    },
-    {
-      'name': 'Kem chống nắng SPF50+',
-      'brand': 'Skin Shield',
-      'price': 320000,
-      'originalPrice': null,
-      'rating': 4.7,
-      'reviews': 89,
-      'emoji': '☀️',
-      'tag': null,
-    },
-    {
-      'name': 'Toner Hoa Hồng',
-      'brand': 'Rose Beauty',
-      'price': 195000,
-      'originalPrice': null,
-      'rating': 4.5,
-      'reviews': 67,
-      'emoji': '🌸',
-      'tag': null,
-    },
-    {
-      'name': 'Mask ngủ dưỡng ẩm',
-      'brand': 'Glow Lab',
-      'price': 240000,
-      'originalPrice': 290000,
-      'rating': 4.4,
-      'reviews': 43,
-      'emoji': '🫧',
-      'tag': '-17%',
-    },
+  final List<String> _categories = [
+    'Tất cả',
+    'Skincare',
+    'Makeup',
+    'Perfume',
+    'Chăm sóc tóc',
   ];
+
+  final List<_Product> _products = [
+    _Product(
+      name: 'Innisfree Green Tea Serum',
+      price: 250000,
+      originalPrice: 350000,
+      discount: '-30%',
+      emoji: '🍵',
+      color: const Color(0xFFE8F5E9),
+      outOfStock: false,
+      isWishlisted: false,
+    ),
+    _Product(
+      name: "L'Oréal Revitalift Cream",
+      price: 450000,
+      originalPrice: null,
+      discount: null,
+      emoji: '💫',
+      color: const Color(0xFFFFF3E0),
+      outOfStock: false,
+      isWishlisted: false,
+    ),
+    _Product(
+      name: 'Laneige Water Sleeping Mask',
+      price: 520000,
+      originalPrice: 610000,
+      discount: '-15%',
+      emoji: '💧',
+      color: const Color(0xFFE3F2FD),
+      outOfStock: false,
+      isWishlisted: false,
+    ),
+    _Product(
+      name: 'MAC Studio Fix Powder',
+      price: 0,
+      originalPrice: null,
+      discount: null,
+      emoji: '🖤',
+      color: const Color(0xFFF5F5F5),
+      outOfStock: true,
+      isWishlisted: false,
+    ),
+    _Product(
+      name: 'The Face Shop Rice Toner',
+      price: 180000,
+      originalPrice: 225000,
+      discount: '-20%',
+      emoji: '🌾',
+      color: const Color(0xFFFFFDE7),
+      outOfStock: false,
+      isWishlisted: true,
+    ),
+    _Product(
+      name: 'Maybelline Foundation',
+      price: 270000,
+      originalPrice: 300000,
+      discount: '-10%',
+      emoji: '💄',
+      color: const Color(0xFFFCE4EC),
+      outOfStock: false,
+      isWishlisted: false,
+    ),
+    _Product(
+      name: 'COSRX Snail Essence',
+      price: 380000,
+      originalPrice: null,
+      discount: null,
+      emoji: '🐌',
+      color: const Color(0xFFF3E5F5),
+      outOfStock: false,
+      isWishlisted: false,
+    ),
+    _Product(
+      name: 'Sulwhasoo First Care',
+      price: 1200000,
+      originalPrice: 1600000,
+      discount: '-25%',
+      emoji: '✨',
+      color: const Color(0xFFFFF8E1),
+      outOfStock: false,
+      isWishlisted: false,
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Sản phẩm',
-          style: TextStyle(
-            fontFamily: 'Playfair Display',
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: AppColors.primary,
+      backgroundColor: const Color(0xFFFFF8F5),
+      body: CustomScrollView(
+        slivers: [
+          _buildAppBar(),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _StickySearchDelegate(child: _buildSearchBar()),
           ),
-        ),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isGridView ? Icons.view_list : Icons.grid_view,
+          SliverToBoxAdapter(child: _buildCategories()),
+          SliverToBoxAdapter(child: _buildFilterRow()),
+          _buildProductGrid(),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
+    );
+  }
+
+  // ── APP BAR ────────────────────────────────────────────────────────────────
+
+  Widget _buildAppBar() {
+    return SliverAppBar(
+      pinned: true,
+      backgroundColor: AppColors.surface,
+      elevation: 1,
+      shadowColor: Colors.black12,
+      surfaceTintColor: Colors.transparent,
+      toolbarHeight: 56,
+      titleSpacing: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.menu, color: AppColors.primary),
+        onPressed: () {},
+      ),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Beauty & Glow',
+            style: TextStyle(
+              fontFamily: 'Playfair Display',
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
               color: AppColors.primary,
             ),
-            onPressed: () => setState(() => _isGridView = !_isGridView),
           ),
-          IconButton(
-            icon: const Icon(Icons.tune, color: AppColors.primary),
-            onPressed: _showFilterSheet,
-          ),
+          const SizedBox(width: 4),
+          Icon(Icons.local_florist, color: AppColors.primary, size: 18),
         ],
       ),
-      body: Column(
-        children: [
-          _buildSortBar(),
-          Expanded(
-            child: _isGridView ? _buildGrid() : _buildList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSortBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: AppColors.surface,
-      child: Row(
-        children: [
-          Text(
-            '${_products.length} sản phẩm',
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.onSurfaceVariant,
+      centerTitle: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search, color: AppColors.onSurfaceVariant),
+          onPressed: () {},
+        ),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.shopping_bag_outlined, color: AppColors.primary),
+              onPressed: () {},
             ),
-          ),
-          const Spacer(),
-          GestureDetector(
-            onTap: _showSortSheet,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.outlineVariant),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.sort, size: 16, color: AppColors.primary),
-                  const SizedBox(width: 4),
-                  Text(
-                    _getSortLabel(),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Text(
+                    '3',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getSortLabel() {
-    switch (_sortBy) {
-      case 'popular':
-        return 'Phổ biến';
-      case 'price_asc':
-        return 'Giá tăng';
-      case 'price_desc':
-        return 'Giá giảm';
-      case 'rating':
-        return 'Đánh giá';
-      default:
-        return 'Mới nhất';
-    }
-  }
-
-  Widget _buildGrid() {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.72,
+          ],
         ),
-        itemCount: _products.length,
-        itemBuilder: (context, index) => ProductCard(product: _products[index]),
-      ),
+        const SizedBox(width: 4),
+      ],
     );
   }
 
-  Widget _buildList() {
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      itemCount: _products.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final p = _products[index];
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(p['emoji'] as String,
-                      style: const TextStyle(fontSize: 40)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      p['brand'] as String,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: AppColors.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      p['name'] as String,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, size: 12, color: Color(0xFFFBC02D)),
-                        Text(' ${p['rating']} (${p['reviews']})',
-                            style: const TextStyle(fontSize: 11)),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${_formatPrice(p['price'] as int)}đ',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            if (p['originalPrice'] != null)
-                              Text(
-                                '${_formatPrice(p['originalPrice'] as int)}đ',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.onSurfaceVariant,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                          ],
-                        ),
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.add, color: Colors.white, size: 18),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // ── SEARCH BAR ─────────────────────────────────────────────────────────────
 
-  void _showSortSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildSearchBar() {
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5EFEA),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.transparent),
+        ),
+        child: Row(
           children: [
-            const Text(
-              'Sắp xếp theo',
-              style: TextStyle(
-                fontFamily: 'Playfair Display',
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+            const SizedBox(width: 14),
+            const Icon(Icons.search, color: AppColors.onSurfaceVariant, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.onSurface,
+                  fontFamily: 'DM Sans',
+                ),
+                decoration: const InputDecoration(
+                  hintText: 'Tìm kiếm sản phẩm, thương hiệu...',
+                  hintStyle: TextStyle(
+                    color: AppColors.outline,
+                    fontSize: 14,
+                    fontFamily: 'DM Sans',
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            ...[
-              ('popular', 'Phổ biến nhất'),
-              ('newest', 'Mới nhất'),
-              ('price_asc', 'Giá tăng dần'),
-              ('price_desc', 'Giá giảm dần'),
-              ('rating', 'Đánh giá cao nhất'),
-            ].map(
-              (item) => RadioListTile<String>(
-                value: item.$1,
-                groupValue: _sortBy,
-                title: Text(item.$2),
-                activeColor: AppColors.primary,
-                contentPadding: EdgeInsets.zero,
-                onChanged: (v) {
-                  setState(() => _sortBy = v!);
-                  Navigator.pop(context);
-                },
-              ),
-            ),
+            const Icon(Icons.mic_none, color: AppColors.onSurfaceVariant, size: 22),
+            const SizedBox(width: 14),
           ],
         ),
       ),
     );
   }
 
-  void _showFilterSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (context, scrollController) => SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Bộ lọc',
-                    style: TextStyle(
-                      fontFamily: 'Playfair Display',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text('Xóa tất cả',
-                        style: TextStyle(color: AppColors.error)),
-                  ),
-                ],
+  // ── CATEGORIES ─────────────────────────────────────────────────────────────
+
+  Widget _buildCategories() {
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: _categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final selected = _selectedCategory == i;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedCategory = i),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: selected ? AppColors.primary : Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: AppColors.primary),
               ),
-              const SizedBox(height: 16),
-              const Text('Khoảng giá',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              const SizedBox(height: 8),
-              RangeSlider(
-                values: RangeValues(0, 800000),
-                min: 0,
-                max: 2000000,
-                activeColor: AppColors.primary,
-                inactiveColor: AppColors.outlineVariant,
-                onChanged: null,
-              ),
-              const SizedBox(height: 16),
-              const Text('Đánh giá',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              const SizedBox(height: 8),
-              ...List.generate(
-                5,
-                (i) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(
-                      5 - i,
-                      (_) => const Icon(Icons.star,
-                          color: Color(0xFFFBC02D), size: 16),
-                    ),
-                  ),
-                  title: Text('${5 - i} sao trở lên',
-                      style: const TextStyle(fontSize: 13)),
-                  trailing: Checkbox(
-                    value: false,
-                    activeColor: AppColors.primary,
-                    onChanged: (_) {},
-                  ),
+              child: Text(
+                _categories[i],
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                  color: selected ? Colors.white : AppColors.primary,
+                  fontFamily: 'DM Sans',
                 ),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25)),
-                  ),
-                  child: const Text('Áp dụng bộ lọc',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  String _formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]}.',
-        );
+  // ── FILTER ROW ─────────────────────────────────────────────────────────────
+
+  Widget _buildFilterRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+      child: Row(
+        children: [
+          _filterChip('Thương hiệu', Icons.arrow_drop_down),
+          const SizedBox(width: 16),
+          _filterChip('Khoảng giá', Icons.arrow_drop_down),
+          const SizedBox(width: 16),
+          _filterChip('Lọc', Icons.filter_list),
+          const Spacer(),
+          GestureDetector(
+            onTap: () {},
+            child: const Icon(Icons.grid_view_rounded,
+                color: AppColors.onSurfaceVariant, size: 22),
+          ),
+        ],
+      ),
+    );
   }
+
+  Widget _filterChip(String label, IconData icon) {
+    return GestureDetector(
+      onTap: () {},
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.5,
+              color: AppColors.onSurfaceVariant,
+              fontFamily: 'DM Sans',
+            ),
+          ),
+          const SizedBox(width: 2),
+          Icon(icon, size: 18, color: AppColors.onSurfaceVariant),
+        ],
+      ),
+    );
+  }
+
+  // ── PRODUCT GRID ───────────────────────────────────────────────────────────
+
+  Widget _buildProductGrid() {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 3 / 4.6,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, i) => _ProductCard(
+            product: _products[i],
+            onWishlistTap: () =>
+                setState(() => _products[i].isWishlisted = !_products[i].isWishlisted),
+            onAddTap: () {},
+          ),
+          childCount: _products.length,
+        ),
+      ),
+    );
+  }
+}
+
+// ── PRODUCT MODEL ──────────────────────────────────────────────────────────────
+
+class _Product {
+  final String name;
+  final int price;
+  final int? originalPrice;
+  final String? discount;
+  final String emoji;
+  final Color color;
+  final bool outOfStock;
+  bool isWishlisted;
+
+  _Product({
+    required this.name,
+    required this.price,
+    required this.originalPrice,
+    required this.discount,
+    required this.emoji,
+    required this.color,
+    required this.outOfStock,
+    required this.isWishlisted,
+  });
+}
+
+// ── PRODUCT CARD ───────────────────────────────────────────────────────────────
+
+class _ProductCard extends StatelessWidget {
+  final _Product product;
+  final VoidCallback onWishlistTap;
+  final VoidCallback onAddTap;
+
+  const _ProductCard({
+    required this.product,
+    required this.onWishlistTap,
+    required this.onAddTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14AC254F),
+            blurRadius: 20,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image area — 3:4 ratio
+              Expanded(
+                flex: 4,
+                child: Container(
+                  width: double.infinity,
+                  color: product.outOfStock
+                      ? const Color(0xFFF5F5F5)
+                      : product.color,
+                  child: Opacity(
+                    opacity: product.outOfStock ? 0.45 : 1.0,
+                    child: ColorFiltered(
+                      colorFilter: product.outOfStock
+                          ? const ColorFilter.matrix([
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0.2126, 0.7152, 0.0722, 0, 0,
+                              0,      0,      0,      1, 0,
+                            ])
+                          : const ColorFilter.mode(
+                              Colors.transparent, BlendMode.color),
+                      child: Center(
+                        child: Text(
+                          product.emoji,
+                          style: const TextStyle(fontSize: 62),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Info area
+              Expanded(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.onSurface,
+                          fontFamily: 'DM Sans',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      if (product.outOfStock)
+                        Text(
+                          'Hết hàng',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurface.withOpacity(0.45),
+                            fontFamily: 'DM Sans',
+                          ),
+                        )
+                      else ...[
+                        Text(
+                          '${_fmt(product.price)}đ',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                            fontFamily: 'DM Sans',
+                          ),
+                        ),
+                        if (product.originalPrice != null)
+                          Text(
+                            '${_fmt(product.originalPrice!)}đ',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.outline,
+                              decoration: TextDecoration.lineThrough,
+                              fontFamily: 'DM Sans',
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Out-of-stock overlay
+          if (product.outOfStock)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.38),
+                child: const Center(
+                  child: _OutOfStockBadge(),
+                ),
+              ),
+            ),
+
+          // Discount badge
+          if (product.discount != null && !product.outOfStock)
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  product.discount!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'DM Sans',
+                  ),
+                ),
+              ),
+            ),
+
+          // Wishlist button
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: product.outOfStock ? null : onWishlistTap,
+              child: Container(
+                width: 32,
+                height: 32,
+                color: Colors.transparent,
+                child: Icon(
+                  product.isWishlisted ? Icons.favorite : Icons.favorite_border,
+                  size: 20,
+                  color: product.outOfStock
+                      ? Colors.white.withOpacity(0.5)
+                      : AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+
+          // Add to cart button
+          if (!product.outOfStock)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: onAddTap,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add, color: Colors.white, size: 18),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(int v) => v.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (m) => '${m[1]}.',
+      );
+}
+
+class _OutOfStockBadge extends StatelessWidget {
+  const _OutOfStockBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Text(
+        'Hết hàng',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.onSurface,
+          fontFamily: 'DM Sans',
+        ),
+      ),
+    );
+  }
+}
+
+// ── STICKY SEARCH DELEGATE ─────────────────────────────────────────────────────
+
+class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  const _StickySearchDelegate({required this.child});
+
+  @override
+  double get minExtent => 64;
+  @override
+  double get maxExtent => 64;
+
+  @override
+  Widget build(
+          BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      child;
+
+  @override
+  bool shouldRebuild(covariant _StickySearchDelegate old) => old.child != child;
 }
