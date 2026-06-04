@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shop_logo.dart';
 import 'login_screen.dart';
@@ -62,14 +64,28 @@ class _RegisterScreenState extends State<RegisterScreen>
       return;
     }
     setState(() => _submitState = _SubmitState.loading);
-    await Future.delayed(const Duration(milliseconds: 1500));
-    if (!mounted) return;
-    setState(() => _submitState = _SubmitState.success);
-    await Future.delayed(const Duration(milliseconds: 1800));
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainShell()),
+
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.register(
+      email: _emailCtrl.text,
+      password: _passCtrl.text,
+      name: _nameCtrl.text,
+      phone: _phoneCtrl.text,
     );
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() => _submitState = _SubmitState.success);
+      await Future.delayed(const Duration(milliseconds: 1200));
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainShell(isLoggedIn: true)),
+      );
+    } else {
+      setState(() => _submitState = _SubmitState.idle);
+      _showSnack(authProvider.errorMessage ?? 'Đăng ký thất bại. Vui lòng thử lại.');
+    }
   }
 
   void _showSnack(String msg) {

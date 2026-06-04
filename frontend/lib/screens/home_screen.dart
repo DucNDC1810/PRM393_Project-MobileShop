@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/product_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/product_card.dart';
 import '../widgets/category_chip.dart';
@@ -13,9 +15,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedCategory = 0;
+  int _selectedCategoryIndex = 0;
+  bool _didInit = false;
 
-  final List<String> _categories = [
+  final List<String> _categoryLabels = [
     'Tất cả',
     'Dưỡng da',
     'Trang điểm',
@@ -23,48 +26,23 @@ class _HomeScreenState extends State<HomeScreen> {
     'Tóc & Móng',
   ];
 
-  final List<Map<String, dynamic>> _featuredProducts = [
-    {
-      'name': 'Kem dưỡng ẩm Rose Glow',
-      'brand': 'Luminous Bloom',
-      'price': 450000,
-      'originalPrice': 590000,
-      'rating': 4.8,
-      'reviews': 234,
-      'emoji': '🌹',
-      'tag': 'Bán chạy',
-    },
-    {
-      'name': 'Son môi Velvet Bloom',
-      'brand': 'Beauty & Glow',
-      'price': 285000,
-      'originalPrice': null,
-      'rating': 4.6,
-      'reviews': 128,
-      'emoji': '💄',
-      'tag': 'Mới',
-    },
-    {
-      'name': 'Serum vitamin C sáng da',
-      'brand': 'Glow Lab',
-      'price': 620000,
-      'originalPrice': 780000,
-      'rating': 4.9,
-      'reviews': 512,
-      'emoji': '✨',
-      'tag': '-20%',
-    },
-    {
-      'name': 'Kem chống nắng SPF50+',
-      'brand': 'Skin Shield',
-      'price': 320000,
-      'originalPrice': null,
-      'rating': 4.7,
-      'reviews': 89,
-      'emoji': '☀️',
-      'tag': null,
-    },
+  final List<String?> _categoryValues = [
+    null,
+    'skincare',
+    'makeup',
+    'perfume',
+    'hair',
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didInit) return;
+    _didInit = true;
+    final provider = context.read<ProductProvider>();
+    provider.loadProducts();
+    provider.loadCategories();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -172,12 +150,15 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _categories.length,
+        itemCount: _categoryLabels.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) => CategoryChip(
-          label: _categories[index],
-          isSelected: _selectedCategory == index,
-          onTap: () => setState(() => _selectedCategory = index),
+          label: _categoryLabels[index],
+          isSelected: _selectedCategoryIndex == index,
+          onTap: () {
+            setState(() => _selectedCategoryIndex = index);
+            context.read<ProductProvider>().filterByCategory(_categoryValues[index]);
+          },
         ),
       ),
     );
@@ -217,6 +198,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFeaturedGrid() {
+    final products = context.watch<ProductProvider>().products;
+
+    if (products.isEmpty) {
+      final provider = context.watch<ProductProvider>();
+      if (provider.isLoading) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: Center(child: CircularProgressIndicator()),
+        );
+      }
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        child: Center(
+          child: Text(
+            'Chưa có sản phẩm nào.',
+            style: TextStyle(color: AppColors.onSurfaceVariant, fontFamily: 'DM Sans'),
+          ),
+        ),
+      );
+    }
+
+    final featured = products.take(4).toList();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
@@ -228,9 +231,8 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSpacing: 12,
           childAspectRatio: 0.72,
         ),
-        itemCount: _featuredProducts.length,
-        itemBuilder: (context, index) =>
-            ProductCard(product: _featuredProducts[index]),
+        itemCount: featured.length,
+        itemBuilder: (context, index) => ProductCard(product: featured[index]),
       ),
     );
   }

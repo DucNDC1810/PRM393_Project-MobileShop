@@ -10,8 +10,7 @@ class ProductService {
   }) async {
     Query<Map<String, dynamic>> query = _db
         .collection('products')
-        .where('is_active', isEqualTo: true)
-        .orderBy('created_at', descending: true);
+        .where('is_active', isEqualTo: true);
 
     if (category != null) {
       query = query.where('category', isEqualTo: category);
@@ -23,17 +22,22 @@ class ProductService {
 
     final snap = await query.get();
 
-    final products = snap.docs.map((doc) {
+    var products = snap.docs.map((doc) {
       final data = doc.data();
-      return <String, dynamic>{
-        ...data,
-        'id': doc.id,
-      };
+      return <String, dynamic>{...data, 'id': doc.id};
     }).toList();
 
+    // sort client-side để tránh cần composite index
+    products.sort((a, b) {
+      final aTime = a['created_at'];
+      final bTime = b['created_at'];
+      if (aTime == null || bTime == null) return 0;
+      return bTime.compareTo(aTime);
+    });
+
     if (onSale == true) {
-      return products.where((product) {
-        final salePrice = product['sale_price'];
+      return products.where((p) {
+        final salePrice = p['sale_price'];
         return salePrice is num && salePrice > 0;
       }).toList();
     }

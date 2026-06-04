@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'products_screen.dart';
 import 'cart_screen.dart';
 import 'profile_screen.dart';
+import 'login_screen.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  const MainShell({super.key, this.isLoggedIn = false});
+
+  // kept for backward compat with pushReplacement calls, but AuthProvider is source of truth
+  final bool isLoggedIn;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -15,25 +21,41 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    ProductsScreen(),
-    CartScreen(),
-    ProfileScreen(),
+  void _onTabTapped(int index, bool isLoggedIn) {
+    final requiresAuth = index == 2 || index == 3;
+    if (requiresAuth && !isLoggedIn) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => LoginScreen(
+            onLoginSuccess: () => setState(() => _currentIndex = index),
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() => _currentIndex = index);
+  }
+
+  List<Widget> _screens(bool isLoggedIn) => [
+    const HomeScreen(),
+    const ProductsScreen(),
+    const CartScreen(),
+    ProfileScreen(isLoggedIn: isLoggedIn),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: _screens(isLoggedIn),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: _buildBottomNav(isLoggedIn),
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(bool isLoggedIn) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -52,11 +74,11 @@ class _MainShellState extends State<MainShell> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(0, Icons.home_outlined, Icons.home, 'Home'),
-              _navItem(1, Icons.grid_view_outlined, Icons.grid_view, 'Products'),
+              _navItem(0, Icons.home_outlined, Icons.home, 'Home', isLoggedIn: isLoggedIn),
+              _navItem(1, Icons.grid_view_outlined, Icons.grid_view, 'Products', isLoggedIn: isLoggedIn),
               _navItem(2, Icons.shopping_bag_outlined, Icons.shopping_bag, 'Cart',
-                  badge: 3),
-              _navItem(3, Icons.person_outline, Icons.person, 'Profile'),
+                  badge: 3, isLoggedIn: isLoggedIn),
+              _navItem(3, Icons.person_outline, Icons.person, 'Profile', isLoggedIn: isLoggedIn),
             ],
           ),
         ),
@@ -70,10 +92,11 @@ class _MainShellState extends State<MainShell> {
     IconData activeIcon,
     String label, {
     int? badge,
+    required bool isLoggedIn,
   }) {
     final isSelected = _currentIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () => _onTabTapped(index, isLoggedIn),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
