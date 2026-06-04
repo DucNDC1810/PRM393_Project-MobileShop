@@ -44,6 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 frontend/build/
+frontend/linux/flutter/ephemeral/
+frontend/windows/flutter/ephemeral/
+frontend/macos/Flutter/ephemeral/
 seed/serviceAccountKey.json
 frontend/seed/node_modules/
 frontend/seed/serviceAccountKey*.json*
