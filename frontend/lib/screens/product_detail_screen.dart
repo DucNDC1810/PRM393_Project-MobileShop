@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/custom_toast.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -378,13 +379,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       context.read<CartProvider>().addItem(p, quantity: _quantity);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Đã thêm $_quantity x $name vào giỏ hàng.'),
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: AppColors.primary,
-                        ),
+                      CustomToast.showSuccess(
+                        context,
+                        'Đã thêm $_quantity x $name vào giỏ hàng.',
                       );
                     },
                     style: ElevatedButton.styleFrom(

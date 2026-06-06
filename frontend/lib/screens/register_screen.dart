@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/custom_toast.dart';
 import '../widgets/shop_logo.dart';
 import 'login_screen.dart';
 import 'main_shell.dart';
@@ -89,14 +90,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: const TextStyle(fontFamily: 'DM Sans')),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    CustomToast.showError(context, msg);
   }
 
   @override

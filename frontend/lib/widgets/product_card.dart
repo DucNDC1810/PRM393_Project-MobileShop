@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../screens/product_detail_screen.dart';
 import '../theme/app_theme.dart';
+import 'custom_toast.dart';
 
 class ProductCard extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -253,13 +254,9 @@ class _ProductCardState extends State<ProductCard> {
                         GestureDetector(
                           onTap: () {
                             context.read<CartProvider>().addItem(p, quantity: 1);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Đã thêm $name vào giỏ hàng.'),
-                                duration: const Duration(milliseconds: 1500),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: AppColors.primary,
-                              ),
+                            CustomToast.showSuccess(
+                              context,
+                              'Đã thêm $name vào giỏ hàng.',
                             );
                           },
                           child: Container(

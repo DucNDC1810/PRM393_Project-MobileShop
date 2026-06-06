@@ -13,25 +13,25 @@ class _PromoBannerState extends State<PromoBanner> {
 
   final List<Map<String, dynamic>> _banners = [
     {
-      'title': 'Siêu phẩm\nGalaxy S24',
-      'subtitle': 'Trả góp 0% • Trải nghiệm quyền năng AI',
-      'cta': 'Khám phá',
-      'emoji': '📱',
-      'gradient': [const Color(0xFF805531), const Color(0xFFC9956C)],
-    },
-    {
-      'title': 'Tai nghe\nKhông dây Pro',
-      'subtitle': 'Âm thanh đỉnh cao • Giảm ngay 20%',
+      'title': 'Dưỡng da\nCăng bóng',
+      'subtitle': 'Ưu đãi đến 30% cho dòng sản phẩm Skincare',
       'cta': 'Mua ngay',
-      'emoji': '🎧',
-      'gradient': [const Color(0xFF665C61), const Color(0xFFEADCE2)],
+      'emoji': '🧴',
+      'gradient': [const Color(0xFFE89A9B), const Color(0xFFF7C5C6)],
     },
     {
-      'title': 'Phụ kiện\nChính hãng',
-      'subtitle': 'Cáp sạc, ốp lưng • Giảm đến 50%',
+      'title': 'Sắc màu\nThời thượng',
+      'subtitle': 'Son Velvet Matte & Nhũ lấp lánh giảm 20%',
       'cta': 'Xem ưu đãi',
-      'emoji': '🔌',
-      'gradient': [const Color(0xFFC9956C), const Color(0xFFF4BB8F)],
+      'emoji': '💄',
+      'gradient': [const Color(0xFFC84B5B), const Color(0xFFE58C96)],
+    },
+    {
+      'title': 'Nước hoa\nHương gỗ ấm',
+      'subtitle': 'Khám phá bộ sưu tập mùi hương sang trọng',
+      'cta': 'Khám phá',
+      'emoji': '🧪',
+      'gradient': [const Color(0xFF8A5C7F), const Color(0xFFB593AD)],
     },
   ];
 

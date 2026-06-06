@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/custom_toast.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -490,11 +491,9 @@ class _CartScreenState extends State<CartScreen> {
             onPressed: () async {
               final auth = context.read<AuthProvider>();
               if (!auth.isLoggedIn) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Vui lòng đăng nhập để thực hiện thanh toán.', style: TextStyle(fontFamily: 'DM Sans')),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                CustomToast.showError(
+                  context,
+                  'Vui lòng đăng nhập để thực hiện thanh toán.',
                 );
                 return;
               }
@@ -560,12 +559,9 @@ class _CartScreenState extends State<CartScreen> {
                 if (mounted) Navigator.of(context).pop();
                 
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Đã có lỗi xảy ra: $e', style: const TextStyle(fontFamily: 'DM Sans')),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppColors.error,
-                    ),
+                  CustomToast.showError(
+                    context,
+                    'Đã có lỗi xảy ra: $e',
                   );
                 }
               }
