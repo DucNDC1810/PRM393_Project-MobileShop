@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/custom_toast.dart';
 import '../widgets/shop_logo.dart';
 import 'main_shell.dart';
 import 'register_screen.dart';
@@ -90,16 +91,9 @@ class _LoginScreenState extends State<LoginScreen>
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            authProvider.errorMessage ?? 'Đăng nhập thất bại.',
-            style: const TextStyle(fontFamily: 'DM Sans'),
-          ),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      CustomToast.showError(
+        context,
+        authProvider.errorMessage ?? 'Đăng nhập thất bại.',
       );
     }
   }
@@ -121,16 +115,9 @@ class _LoginScreenState extends State<LoginScreen>
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            authProvider.errorMessage ?? 'Đăng nhập Google thất bại.',
-            style: const TextStyle(fontFamily: 'DM Sans'),
-          ),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      CustomToast.showError(
+        context,
+        authProvider.errorMessage ?? 'Đăng nhập Google thất bại.',
       );
     }
   }
@@ -152,16 +139,9 @@ class _LoginScreenState extends State<LoginScreen>
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            authProvider.errorMessage ?? 'Đăng nhập Facebook thất bại.',
-            style: const TextStyle(fontFamily: 'DM Sans'),
-          ),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      CustomToast.showError(
+        context,
+        authProvider.errorMessage ?? 'Đăng nhập Facebook thất bại.',
       );
     }
   }
@@ -169,29 +149,26 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _handleForgotPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Vui lòng nhập email trước.', style: TextStyle(fontFamily: 'DM Sans')),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+      CustomToast.showError(
+        context,
+        'Vui lòng nhập email trước.',
       );
       return;
     }
     final success = await context.read<AuthProvider>().sendPasswordReset(email);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success ? 'Đã gửi email đặt lại mật khẩu.' : (context.read<AuthProvider>().errorMessage ?? 'Lỗi gửi email.'),
-          style: const TextStyle(fontFamily: 'DM Sans'),
-        ),
-        backgroundColor: success ? AppColors.success : AppColors.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    if (success) {
+      CustomToast.showSuccess(
+        context,
+        'Đã gửi email đặt lại mật khẩu.',
+        icon: Icons.mail_outline_rounded,
+      );
+    } else {
+      CustomToast.showError(
+        context,
+        context.read<AuthProvider>().errorMessage ?? 'Lỗi gửi email.',
+      );
+    }
   }
 
   @override

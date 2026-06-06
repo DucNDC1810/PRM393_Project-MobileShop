@@ -92,6 +92,13 @@ class ProductProvider extends ChangeNotifier {
     try {
       _products = await _service.getProducts(category: category);
       _selectedCategory = category;
+      
+      // Auto-seed mock data if database is empty
+      if (_products.isEmpty && category == null) {
+        await _service.seedMockData();
+        _products = await _service.getProducts(category: category);
+      }
+      
       _status = LoadStatus.success;
     } catch (e) {
       _error = e.toString();
@@ -104,6 +111,13 @@ class ProductProvider extends ChangeNotifier {
   Future<void> loadCategories() async {
     try {
       _categories = await _service.getCategories();
+      
+      // Auto-seed mock data if database is empty
+      if (_categories.isEmpty) {
+        await _service.seedMockData();
+        _categories = await _service.getCategories();
+      }
+      
       notifyListeners();
     } catch (e) {
       _error = e.toString();
