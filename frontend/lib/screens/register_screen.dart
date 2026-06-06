@@ -101,9 +101,11 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Stack(
         children: [
           // Background ornaments
           Positioned(
@@ -127,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               height: 280,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.surfaceContainerHighest.withOpacity(0.6),
+                color: AppColors.surfaceContainerHighest.withOpacity(0.4),
               ),
               transform: Matrix4.translationValues(-100, 100, 0),
             ),
@@ -158,8 +160,9 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ── LOGO ──────────────────────────────────────────────────────────────────
 
@@ -179,7 +182,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         ],
       ),
       child: const Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(14),
         child: ShopLogo(size: 48),
       ),
     );
@@ -193,7 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Text(
           'Tạo tài khoản mới',
           style: TextStyle(
-            fontFamily: 'Playfair Display',
+            fontFamily: 'DM Sans',
             fontSize: 24,
             fontWeight: FontWeight.w700,
             color: AppColors.primary,
@@ -202,7 +205,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         ),
         SizedBox(height: 6),
         Text(
-          'Tham gia cùng chúng tôi để nhận ưu đãi đặc quyền.',
+          'Tham gia cùng chúng tôi để nhận ưu đãi mỹ phẩm đặc quyền.',
           style: TextStyle(
             fontSize: 14,
             color: AppColors.onSurfaceVariant,
@@ -289,7 +292,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             ),
             const SizedBox(height: 18),
 
-            // Password row (stacked on mobile, side-by-side on wider screens)
+            // Password row
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -360,7 +363,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     activeColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4)),
-                    side: const BorderSide(color: AppColors.secondaryContainer),
+                    side: const BorderSide(color: AppColors.outlineVariant),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
@@ -532,9 +535,9 @@ class _RegisterScreenState extends State<RegisterScreen>
       child: OutlinedButton(
         onPressed: () {},
         style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.surfaceContainer,
+          backgroundColor: AppColors.surfaceDim,
           foregroundColor: AppColors.onSurface,
-          side: const BorderSide(color: AppColors.secondaryContainer),
+          side: const BorderSide(color: AppColors.outlineVariant),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(999)),
         ),
@@ -547,7 +550,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               'Tiếp tục với Google',
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 fontFamily: 'DM Sans',
                 color: AppColors.onSurface,
               ),
@@ -606,7 +609,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         label,
         style: const TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
           color: AppColors.onSurfaceVariant,
           fontFamily: 'DM Sans',
@@ -684,10 +687,10 @@ class _RegisterScreenState extends State<RegisterScreen>
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.secondaryContainer)),
+            borderSide: const BorderSide(color: AppColors.outlineVariant)),
         enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.secondaryContainer)),
+            borderSide: const BorderSide(color: AppColors.outlineVariant)),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
@@ -702,11 +705,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       );
 }
 
-// ── SUBMIT STATE ───────────────────────────────────────────────────────────────
-
 enum _SubmitState { idle, loading, success }
-
-// ── GOOGLE ICON PAINTER ────────────────────────────────────────────────────────
 
 class _GoogleIconPainter extends CustomPainter {
   @override
@@ -716,7 +715,6 @@ class _GoogleIconPainter extends CustomPainter {
     void draw(String path, Color color) {
       final paint = Paint()..color = color;
       final p = Path();
-      // Simplified circle segments approximating the Google "G" logo
       switch (path) {
         case 'blue':
           p.moveTo(22.56 * s, 12.25 * s);

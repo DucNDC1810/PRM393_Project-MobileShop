@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'products_screen.dart';
@@ -46,16 +47,17 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final isLoggedIn = context.watch<AuthProvider>().isLoggedIn;
+    final cartCount = context.watch<CartProvider>().itemCount;
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: _screens(isLoggedIn),
       ),
-      bottomNavigationBar: _buildBottomNav(isLoggedIn),
+      bottomNavigationBar: _buildBottomNav(isLoggedIn, cartCount),
     );
   }
 
-  Widget _buildBottomNav(bool isLoggedIn) {
+  Widget _buildBottomNav(bool isLoggedIn, int cartCount) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -77,7 +79,7 @@ class _MainShellState extends State<MainShell> {
               _navItem(0, Icons.home_outlined, Icons.home, 'Home', isLoggedIn: isLoggedIn),
               _navItem(1, Icons.grid_view_outlined, Icons.grid_view, 'Products', isLoggedIn: isLoggedIn),
               _navItem(2, Icons.shopping_bag_outlined, Icons.shopping_bag, 'Cart',
-                  badge: 3, isLoggedIn: isLoggedIn),
+                  badge: cartCount > 0 ? cartCount : null, isLoggedIn: isLoggedIn),
               _navItem(3, Icons.person_outline, Icons.person, 'Profile', isLoggedIn: isLoggedIn),
             ],
           ),

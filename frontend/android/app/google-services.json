@@ -1,26 +1,44 @@
 {
   "project_info": {
-    "project_number": "551557072407",
-    "project_id": "prm393-mobileshop",
-    "storage_bucket": "prm393-mobileshop.firebasestorage.app"
+    "project_number": "202728848907",
+    "project_id": "beauty-and-glow",
+    "storage_bucket": "beauty-and-glow.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:551557072407:android:8dab3e884951d9d7affe52",
+        "mobilesdk_app_id": "1:202728848907:android:ea7f7fbad6990c2cc0910e",
         "android_client_info": {
           "package_name": "com.example.project_mobileshop"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "202728848907-ggm44mm29fn1t750294mgcm21e7833g4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.project_mobileshop",
+            "certificate_hash": "3cd3624b7144976926f90a35e71bfbbbc32c7839"
+          }
+        },
+        {
+          "client_id": "202728848907-rrras0p565sctmnqjhqrgh9g4hcoave2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyD3UOGLGNkGvU73ZxZuMaWJzPo8kvgW5Us"
+          "current_key": "AIzaSyDfdkcpc3sCjCvyHLH264gnRXonBRe6pEA"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "202728848907-rrras0p565sctmnqjhqrgh9g4hcoave2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

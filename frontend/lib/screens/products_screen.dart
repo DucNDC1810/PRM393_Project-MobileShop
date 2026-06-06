@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/product_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/product_card.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -46,9 +46,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final products = _filterProducts(provider.products);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F5),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Sản phẩm'),
+        title: const Text(
+          'Sản phẩm',
+          style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.primary,
@@ -73,19 +76,56 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   children: [
-                    _filterChip('Thương hiệu', Icons.arrow_drop_down),
-                    const SizedBox(width: 12),
-                    _filterChip('Khoảng giá', Icons.arrow_drop_down),
-                    const SizedBox(width: 12),
-                    _filterChip('Lọc', Icons.filter_list),
-                    const Spacer(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _filterChip(
+                              provider.selectedBrand ?? 'Thương hiệu',
+                              Icons.arrow_drop_down,
+                              provider.selectedBrand != null,
+                              () => _showBrandFilterSheet(context, provider),
+                            ),
+                            const SizedBox(width: 8),
+                            _filterChip(
+                              _getPriceRangeLabel(provider.selectedPriceRange),
+                              Icons.arrow_drop_down,
+                              provider.selectedPriceRange != null,
+                              () => _showPriceRangeFilterSheet(context, provider),
+                            ),
+                            const SizedBox(width: 8),
+                            _filterChip(
+                              _getSortLabel(provider.sortBy),
+                              Icons.filter_list,
+                              provider.sortBy != null,
+                              () => _showSortFilterSheet(context, provider),
+                            ),
+                            if (provider.selectedBrand != null ||
+                                provider.selectedPriceRange != null ||
+                                provider.sortBy != null) ...[
+                              const SizedBox(width: 8),
+                              _filterChip(
+                                'Xóa bộ lọc',
+                                Icons.close,
+                                false,
+                                () => provider.resetFilters(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     IconButton(
                       onPressed: () {},
                       icon: const Icon(Icons.grid_view_rounded,
                           color: AppColors.onSurfaceVariant),
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
                     ),
                   ],
                 ),
@@ -113,7 +153,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
             else if (products.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
-                child: Center(child: Text('Không có sản phẩm')),
+                child: Center(
+                  child: Text(
+                    'Không có sản phẩm',
+                    style: TextStyle(fontFamily: 'DM Sans'),
+                  ),
+                ),
               )
             else
               SliverPadding(
@@ -123,10 +168,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     crossAxisCount: 2,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 0.72,
+                    childAspectRatio: 0.60, // slightly adjusted ratio to match custom ProductCard layout
                   ),
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => _ProductCard(product: products[index]),
+                    (context, index) => ProductCard(product: products[index]),
                     childCount: products.length,
                   ),
                 ),
@@ -152,8 +197,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        color: const Color(0xFFF5EFEA),
+        color: AppColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.outlineVariant),
       ),
       child: Row(
         children: [
@@ -222,16 +268,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
               duration: const Duration(milliseconds: 180),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: selected ? AppColors.primary : Colors.white,
+                color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AppColors.primary),
+                border: Border.all(
+                  color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.15),
+                  width: selected ? 1.5 : 1.0,
+                ),
               ),
               child: Center(
                 child: Text(
                   category['name']?.toString() ?? '',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected ? Colors.white : AppColors.primary,
                     fontFamily: 'DM Sans',
                   ),
@@ -244,145 +293,214 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  Widget _filterChip(String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.onSurfaceVariant,
-              fontFamily: 'DM Sans',
-            ),
-          ),
-          const SizedBox(width: 2),
-          Icon(icon, size: 18, color: AppColors.onSurfaceVariant),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProductCard extends StatelessWidget {
-  final Map<String, dynamic> product;
-
-  const _ProductCard({required this.product});
-
-  @override
-  Widget build(BuildContext context) {
-    final name = (product['name'] ?? '').toString();
-    final brand = (product['brand'] ?? '').toString();
-    final images = (product['images'] as List?)?.whereType<String>().toList() ?? const [];
-    final price = (product['price'] as num?)?.toInt() ?? 0;
-    final salePrice = (product['sale_price'] as num?)?.toInt() ?? 0;
-    final stock = (product['stock'] as num?)?.toInt() ?? 0;
-    final inStock = stock > 0;
-    final hasSale = salePrice > 0;
-    final displayPrice = hasSale ? salePrice : price;
-    final discountPercent = hasSale && price > 0
-        ? (((price - salePrice) / price) * 100).round()
-        : null;
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 0.8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Container(color: const Color(0xFFF8F1F4)),
-                if (images.isNotEmpty)
-                  CachedNetworkImage(
-                    imageUrl: images.first,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, _, _) => const Center(
-                      child: Icon(Icons.image, size: 40),
-                    ),
-                  )
-                else
-                  const Center(child: Icon(Icons.image, size: 40)),
-                if (!inStock)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.38),
-                    child: const Center(
-                      child: Text(
-                        'Hết hàng',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                if (discountPercent != null && inStock)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8547A),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '-$discountPercent%',
-                        style: const TextStyle(color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  brand,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  name,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_formatPrice(displayPrice)}đ',
-                  style: const TextStyle(
-                    color: Color(0xFFE8547A),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  String _getPriceRangeLabel(String? range) {
+    if (range == 'under_500k') return 'Dưới 500k';
+    if (range == '500k_1m') return '500k - 1M';
+    if (range == 'over_1m') return 'Trên 1M';
+    return 'Khoảng giá';
   }
 
-  String _formatPrice(int value) {
-    return value.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (match) => '${match[1]}.',
+  String _getSortLabel(String? sort) {
+    if (sort == 'price_asc') return 'Giá tăng dần';
+    if (sort == 'price_desc') return 'Giá giảm dần';
+    return 'Lọc';
+  }
+
+  void _showBrandFilterSheet(BuildContext context, ProductProvider provider) {
+    final brands = provider.availableBrands;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Chọn thương hiệu',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'DM Sans',
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      title: const Text('Tất cả thương hiệu', style: TextStyle(fontFamily: 'DM Sans')),
+                      trailing: provider.selectedBrand == null
+                          ? const Icon(Icons.check, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        provider.setBrand(null);
+                        Navigator.pop(context);
+                      },
+                    ),
+                    ...brands.map((brand) => ListTile(
+                          title: Text(brand, style: const TextStyle(fontFamily: 'DM Sans')),
+                          trailing: provider.selectedBrand == brand
+                              ? const Icon(Icons.check, color: AppColors.primary)
+                              : null,
+                          onTap: () {
+                            provider.setBrand(brand);
+                            Navigator.pop(context);
+                          },
+                        )),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
+      },
+    );
+  }
+
+  void _showPriceRangeFilterSheet(BuildContext context, ProductProvider provider) {
+    final ranges = [
+      {'label': 'Tất cả khoảng giá', 'value': null},
+      {'label': 'Dưới 500.000đ', 'value': 'under_500k'},
+      {'label': '500.000đ - 1.000.000đ', 'value': '500k_1m'},
+      {'label': 'Trên 1.000.000đ', 'value': 'over_1m'},
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Chọn khoảng giá',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'DM Sans',
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...ranges.map((r) => ListTile(
+                    title: Text(r['label'] as String, style: const TextStyle(fontFamily: 'DM Sans')),
+                    trailing: provider.selectedPriceRange == r['value']
+                        ? const Icon(Icons.check, color: AppColors.primary)
+                        : null,
+                    onTap: () {
+                      provider.setPriceRange(r['value'] as String?);
+                      Navigator.pop(context);
+                    },
+                  )),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSortFilterSheet(BuildContext context, ProductProvider provider) {
+    final sortOptions = [
+      {'label': 'Mới nhất', 'value': null},
+      {'label': 'Giá tăng dần (Thấp đến Cao)', 'value': 'price_asc'},
+      {'label': 'Giá giảm dần (Cao đến Thấp)', 'value': 'price_desc'},
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sắp xếp theo',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'DM Sans',
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...sortOptions.map((s) => ListTile(
+                    title: Text(s['label'] as String, style: const TextStyle(fontFamily: 'DM Sans')),
+                    trailing: provider.sortBy == s['value']
+                        ? const Icon(Icons.check, color: AppColors.primary)
+                        : null,
+                    onTap: () {
+                      provider.setSortBy(s['value'] as String?);
+                      Navigator.pop(context);
+                    },
+                  )),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _filterChip(
+    String label,
+    IconData icon,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.08) : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.primary.withOpacity(0.2),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+                fontFamily: 'DM Sans',
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

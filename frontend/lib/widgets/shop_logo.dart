@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class ShopLogo extends StatelessWidget {
   final double size;
+  final Color? color;
 
-  const ShopLogo({super.key, this.size = 36});
+  const ShopLogo({super.key, this.size = 36, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -11,54 +13,106 @@ class ShopLogo extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _ShopLogoPainter(),
+        painter: _ShopLogoPainter(color: color),
       ),
     );
   }
 }
 
 class _ShopLogoPainter extends CustomPainter {
+  final Color? color;
+
+  _ShopLogoPainter({this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final double s = size.width;
     final scaleX = s / 80;
     final scaleY = s / 80;
 
-    // White circle background
-    final circlePaint = Paint()..color = Colors.white;
+    // Background circle (clean white/light peach tint)
+    final circlePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(s / 2, s / 2), s / 2, circlePaint);
 
-    // Petal / flower shape - pink (#E8547A)
-    final petalPaint = Paint()
-      ..color = const Color(0xFFE8547A)
+    // Dynamic brand colors
+    final primaryColor = color ?? AppColors.primary;
+    final secondaryColor = AppColors.primaryContainer;
+
+    // 1. Draw Cap (Gold/Rose gold cap on top)
+    final capPaint = Paint()
+      ..color = primaryColor
+      ..style = PaintingStyle.fill;
+    final capRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(32 * scaleX, 12 * scaleY, 16 * scaleX, 10 * scaleY),
+      Radius.circular(3 * scaleX),
+    );
+    canvas.drawRRect(capRect, capPaint);
+
+    // 2. Draw Neck / Collar
+    final neckPaint = Paint()
+      ..color = secondaryColor
+      ..style = PaintingStyle.fill;
+    final neckRect = Rect.fromLTWH(36 * scaleX, 22 * scaleY, 8 * scaleX, 4 * scaleY);
+    canvas.drawRect(neckRect, neckPaint);
+
+    // 3. Draw Glass Bottle Outline
+    final bottleOutlinePaint = Paint()
+      ..color = primaryColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3 * scaleX
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    
+    final bottleBodyRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(20 * scaleX, 26 * scaleY, 40 * scaleX, 44 * scaleY),
+      Radius.circular(8 * scaleX),
+    );
+    canvas.drawRRect(bottleBodyRect, bottleOutlinePaint);
+
+    // 4. Fill Bottle with soft liquid color (semi-transparent pink)
+    final liquidPaint = Paint()
+      ..color = primaryColor.withOpacity(0.15)
+      ..style = PaintingStyle.fill;
+    final liquidRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(23 * scaleX, 29 * scaleY, 34 * scaleX, 38 * scaleY),
+      Radius.circular(5 * scaleX),
+    );
+    canvas.drawRRect(liquidRect, liquidPaint);
+
+    // 5. Draw Luxury Gold/Rose Heart Label inside the bottle
+    final labelPaint = Paint()
+      ..color = primaryColor
       ..style = PaintingStyle.fill;
 
-    final petalPath = Path();
-    // Translated path from SVG: M40 25C42 20 48 20 50 25C55 27 55 33 50 35C52 40 48 45 42 45C40 50 34 50 32 45C26 43 26 37 31 35C29 30 33 25 39 25
-    petalPath.moveTo(40 * scaleX, 25 * scaleY);
-    petalPath.cubicTo(42 * scaleX, 20 * scaleY, 48 * scaleX, 20 * scaleY, 50 * scaleX, 25 * scaleY);
-    petalPath.cubicTo(55 * scaleX, 27 * scaleY, 55 * scaleX, 33 * scaleY, 50 * scaleX, 35 * scaleY);
-    petalPath.cubicTo(52 * scaleX, 40 * scaleY, 48 * scaleX, 45 * scaleY, 42 * scaleX, 45 * scaleY);
-    petalPath.cubicTo(40 * scaleX, 50 * scaleY, 34 * scaleX, 50 * scaleY, 32 * scaleX, 45 * scaleY);
-    petalPath.cubicTo(26 * scaleX, 43 * scaleY, 26 * scaleX, 37 * scaleY, 31 * scaleX, 35 * scaleY);
-    petalPath.cubicTo(29 * scaleX, 30 * scaleY, 33 * scaleX, 25 * scaleY, 39 * scaleX, 25 * scaleY);
-    petalPath.close();
-    canvas.drawPath(petalPath, petalPaint);
-
-    // Inner highlight - light pink (#FDE8EF)
-    final highlightPaint = Paint()
-      ..color = const Color(0xFFFDE8EF)
-      ..style = PaintingStyle.fill;
-
-    final highlightPath = Path();
-    // M40 33C40 33 42 30 45 32C48 34 45 38 40 37C35 38 32 34 35 32C38 30 40 33 40 33Z
-    highlightPath.moveTo(40 * scaleX, 33 * scaleY);
-    highlightPath.cubicTo(40 * scaleX, 33 * scaleY, 42 * scaleX, 30 * scaleY, 45 * scaleX, 32 * scaleY);
-    highlightPath.cubicTo(48 * scaleX, 34 * scaleY, 45 * scaleX, 38 * scaleY, 40 * scaleX, 37 * scaleY);
-    highlightPath.cubicTo(35 * scaleX, 38 * scaleY, 32 * scaleX, 34 * scaleY, 35 * scaleX, 32 * scaleY);
-    highlightPath.cubicTo(38 * scaleX, 30 * scaleY, 40 * scaleX, 33 * scaleY, 40 * scaleX, 33 * scaleY);
-    highlightPath.close();
-    canvas.drawPath(highlightPath, highlightPaint);
+    final heartPath = Path();
+    heartPath.moveTo(40 * scaleX, 43 * scaleY);
+    // Left lobe
+    heartPath.cubicTo(
+      36 * scaleX, 39 * scaleY, 
+      31 * scaleX, 41 * scaleY, 
+      32 * scaleX, 46 * scaleY,
+    );
+    // Down to bottom tip
+    heartPath.cubicTo(
+      32 * scaleX, 51 * scaleY, 
+      40 * scaleX, 56 * scaleY, 
+      40 * scaleX, 58 * scaleY,
+    );
+    // Up from bottom tip to right lobe
+    heartPath.cubicTo(
+      40 * scaleX, 56 * scaleY, 
+      48 * scaleX, 51 * scaleY, 
+      48 * scaleX, 46 * scaleY,
+    );
+    // Right lobe back to center
+    heartPath.cubicTo(
+      49 * scaleX, 41 * scaleY, 
+      44 * scaleX, 39 * scaleY, 
+      40 * scaleX, 43 * scaleY,
+    );
+    canvas.drawPath(heartPath, labelPaint);
   }
 
   @override

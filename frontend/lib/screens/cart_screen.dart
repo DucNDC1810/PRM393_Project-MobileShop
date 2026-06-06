@@ -1,4 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
 
 class CartScreen extends StatefulWidget {
@@ -9,68 +13,50 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  final List<Map<String, dynamic>> _cartItems = [
-    {
-      'name': 'Kem dưỡng ẩm Rose Glow',
-      'brand': 'Luminous Bloom',
-      'price': 450000,
-      'quantity': 1,
-      'emoji': '🌹',
-    },
-    {
-      'name': 'Son môi Velvet Bloom',
-      'brand': 'Beauty & Glow',
-      'price': 285000,
-      'quantity': 2,
-      'emoji': '💄',
-    },
-    {
-      'name': 'Serum vitamin C sáng da',
-      'brand': 'Glow Lab',
-      'price': 620000,
-      'quantity': 1,
-      'emoji': '✨',
-    },
-  ];
-
   String _couponCode = '';
   bool _couponApplied = false;
 
-  int get _subtotal => _cartItems.fold(
-      0, (sum, item) => sum + (item['price'] as int) * (item['quantity'] as int));
-
-  int get _discount => _couponApplied ? (_subtotal * 0.1).round() : 0;
-  int get _shipping => _subtotal > 500000 ? 0 : 30000;
-  int get _total => _subtotal - _discount + _shipping;
-
   @override
   Widget build(BuildContext context) {
+    final cart = context.watch<CartProvider>();
+    final cartItems = cart.items;
+
+    final int subtotal = cart.totalAmount;
+    final int discount = _couponApplied ? (subtotal * 0.1).round() : 0;
+    final int shipping = subtotal > 500000 || subtotal == 0 ? 0 : 30000;
+    final int total = subtotal - discount + shipping;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          'Giỏ hàng (${_cartItems.length})',
+          'Giỏ hàng (${cartItems.length})',
           style: const TextStyle(
-            fontFamily: 'Playfair Display',
+            fontFamily: 'DM Sans',
             fontSize: 20,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
             color: AppColors.primary,
           ),
         ),
         backgroundColor: AppColors.surface,
-        elevation: 0,
+        elevation: 0.5,
         actions: [
-          TextButton(
-            onPressed: () => setState(() => _cartItems.clear()),
-            child: const Text(
-              'Xóa tất cả',
-              style: TextStyle(color: AppColors.error, fontSize: 13),
+          if (cartItems.isNotEmpty)
+            TextButton(
+              onPressed: () => cart.clear(),
+              child: const Text(
+                'Xóa tất cả',
+                style: TextStyle(color: AppColors.error, fontSize: 13, fontFamily: 'DM Sans', fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
         ],
       ),
-      body: _cartItems.isEmpty ? _buildEmptyCart() : _buildCartContent(),
-      bottomNavigationBar: _cartItems.isEmpty ? null : _buildCheckoutBar(),
+      body: cartItems.isEmpty 
+          ? _buildEmptyCart() 
+          : _buildCartContent(cart, cartItems, subtotal, discount, shipping, total),
+      bottomNavigationBar: cartItems.isEmpty 
+          ? null 
+          : _buildCheckoutBar(cart, cartItems, subtotal, discount, shipping, total),
     );
   }
 
@@ -84,9 +70,9 @@ class _CartScreenState extends State<CartScreen> {
           const Text(
             'Giỏ hàng trống',
             style: TextStyle(
-              fontFamily: 'Playfair Display',
+              fontFamily: 'DM Sans',
               fontSize: 22,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: AppColors.onSurface,
             ),
           ),
@@ -96,44 +82,58 @@ class _CartScreenState extends State<CartScreen> {
             style: TextStyle(
               fontSize: 14,
               color: AppColors.onSurfaceVariant,
+              fontFamily: 'DM Sans',
             ),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              // Switch to products tab
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24)),
+              elevation: 0,
             ),
-            child: const Text('Mua sắm ngay',
-                style: TextStyle(fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Mua sắm ngay',
+              style: TextStyle(fontWeight: FontWeight.w700, fontFamily: 'DM Sans'),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCartContent() {
+  Widget _buildCartContent(
+    CartProvider cart, 
+    List<Map<String, dynamic>> cartItems, 
+    int subtotal, 
+    int discount, 
+    int shipping, 
+    int total,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ..._cartItems.asMap().entries.map((e) => _buildCartItem(e.key, e.value)),
+          ...cartItems.map((item) => _buildCartItem(cart, item)),
           const SizedBox(height: 16),
-          _buildCouponSection(),
+          _buildCouponSection(discount),
           const SizedBox(height: 16),
-          _buildOrderSummary(),
-          if (_shipping == 0) ...[
+          _buildOrderSummary(subtotal, discount, shipping, total),
+          if (shipping == 0 && subtotal > 0) ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: const Color(0xFFE8F5E9),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withOpacity(0.2)),
               ),
               child: const Row(
                 children: [
@@ -144,7 +144,8 @@ class _CartScreenState extends State<CartScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       color: Color(0xFF2E7D32),
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'DM Sans',
                     ),
                   ),
                 ],
@@ -156,7 +157,11 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildCartItem(int index, Map<String, dynamic> item) {
+  Widget _buildCartItem(CartProvider cart, Map<String, dynamic> item) {
+    final String id = item['id'] as String;
+    final int itemPrice = item['price'] as int;
+    final int itemQuantity = item['quantity'] as int;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -191,6 +196,7 @@ class _CartScreenState extends State<CartScreen> {
                     color: AppColors.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.5,
+                    fontFamily: 'DM Sans',
                   ),
                 ),
                 Text(
@@ -199,6 +205,7 @@ class _CartScreenState extends State<CartScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.onSurface,
+                    fontFamily: 'DM Sans',
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -208,39 +215,35 @@ class _CartScreenState extends State<CartScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${_formatPrice((item['price'] as int) * (item['quantity'] as int))}đ',
+                      '${_formatPrice(itemPrice * itemQuantity)}đ',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
+                        fontFamily: 'DM Sans',
                       ),
                     ),
                     Row(
                       children: [
                         _quantityButton(
                           Icons.remove,
-                          () => setState(() {
-                            if (item['quantity'] > 1) {
-                              item['quantity']--;
-                            } else {
-                              _cartItems.removeAt(index);
-                            }
-                          }),
+                          () => cart.updateQuantity(id, itemQuantity - 1),
                         ),
                         Container(
                           width: 32,
                           alignment: Alignment.center,
                           child: Text(
-                            '${item['quantity']}',
+                            '$itemQuantity',
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 15,
+                              fontFamily: 'DM Sans',
                             ),
                           ),
                         ),
                         _quantityButton(
                           Icons.add,
-                          () => setState(() => item['quantity']++),
+                          () => cart.updateQuantity(id, itemQuantity + 1),
                         ),
                       ],
                     ),
@@ -263,13 +266,14 @@ class _CartScreenState extends State<CartScreen> {
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.outlineVariant),
           borderRadius: BorderRadius.circular(8),
+          color: AppColors.surface,
         ),
         child: Icon(icon, size: 16, color: AppColors.primary),
       ),
     );
   }
 
-  Widget _buildCouponSection() {
+  Widget _buildCouponSection(int discount) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -286,6 +290,7 @@ class _CartScreenState extends State<CartScreen> {
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: AppColors.onSurface,
+              fontFamily: 'DM Sans',
             ),
           ),
           const SizedBox(height: 10),
@@ -300,7 +305,7 @@ class _CartScreenState extends State<CartScreen> {
                   decoration: InputDecoration(
                     hintText: 'Nhập mã giảm giá...',
                     hintStyle: const TextStyle(
-                        color: AppColors.onSurfaceVariant, fontSize: 13),
+                        color: AppColors.onSurfaceVariant, fontSize: 13, fontFamily: 'DM Sans'),
                     filled: true,
                     fillColor: AppColors.surfaceContainerLow,
                     border: OutlineInputBorder(
@@ -340,9 +345,10 @@ class _CartScreenState extends State<CartScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
                 child: const Text('Áp dụng',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, fontFamily: 'DM Sans')),
               ),
             ],
           ),
@@ -350,11 +356,12 @@ class _CartScreenState extends State<CartScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'Mã giảm giá đã được áp dụng! Tiết kiệm ${_formatPrice(_discount)}đ',
+                'Mã giảm giá đã được áp dụng! Tiết kiệm ${_formatPrice(discount)}đ',
                 style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.success,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'DM Sans',
                 ),
               ),
             ),
@@ -363,7 +370,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildOrderSummary() {
+  Widget _buildOrderSummary(int subtotal, int discount, int shipping, int total) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -378,15 +385,15 @@ class _CartScreenState extends State<CartScreen> {
             'Tóm tắt đơn hàng',
             style: TextStyle(
               fontSize: 15,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: AppColors.onSurface,
-              fontFamily: 'Playfair Display',
+              fontFamily: 'DM Sans',
             ),
           ),
           const SizedBox(height: 14),
-          _summaryRow('Tạm tính', _subtotal),
-          if (_couponApplied) _summaryRow('Giảm giá (10%)', -_discount, isDiscount: true),
-          _summaryRow('Vận chuyển', _shipping, isFree: _shipping == 0),
+          _summaryRow('Tạm tính', subtotal),
+          if (_couponApplied) _summaryRow('Giảm giá (10%)', -discount, isDiscount: true),
+          _summaryRow('Vận chuyển', shipping, isFree: shipping == 0),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
             child: Divider(color: AppColors.outlineVariant),
@@ -398,16 +405,18 @@ class _CartScreenState extends State<CartScreen> {
                 'Tổng cộng',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.onSurface,
+                  fontFamily: 'DM Sans',
                 ),
               ),
               Text(
-                '${_formatPrice(_total)}đ',
+                '${_formatPrice(total)}đ',
                 style: const TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.primary,
+                  fontFamily: 'DM Sans',
                 ),
               ),
             ],
@@ -429,6 +438,7 @@ class _CartScreenState extends State<CartScreen> {
             style: const TextStyle(
               fontSize: 13,
               color: AppColors.onSurfaceVariant,
+              fontFamily: 'DM Sans',
             ),
           ),
           isFree
@@ -438,6 +448,7 @@ class _CartScreenState extends State<CartScreen> {
                     fontSize: 13,
                     color: AppColors.success,
                     fontWeight: FontWeight.w600,
+                    fontFamily: 'DM Sans',
                   ),
                 )
               : Text(
@@ -446,6 +457,7 @@ class _CartScreenState extends State<CartScreen> {
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: isDiscount ? AppColors.success : AppColors.onSurface,
+                    fontFamily: 'DM Sans',
                   ),
                 ),
         ],
@@ -453,7 +465,14 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildCheckoutBar() {
+  Widget _buildCheckoutBar(
+    CartProvider cart, 
+    List<Map<String, dynamic>> cartItems, 
+    int subtotal, 
+    int discount, 
+    int shipping, 
+    int total,
+  ) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: const BoxDecoration(
@@ -468,7 +487,89 @@ class _CartScreenState extends State<CartScreen> {
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () async {
+              final auth = context.read<AuthProvider>();
+              if (!auth.isLoggedIn) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Vui lòng đăng nhập để thực hiện thanh toán.', style: TextStyle(fontFamily: 'DM Sans')),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
+
+              // Show loading dialog
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator()),
+              );
+
+              try {
+                final user = auth.user;
+                final itemsData = cartItems.map((item) => {
+                  'id': item['id'],
+                  'name': item['name'],
+                  'brand': item['brand'],
+                  'price': item['price'],
+                  'quantity': item['quantity'],
+                  'emoji': item['emoji'],
+                }).toList();
+
+                await FirebaseFirestore.instance.collection('orders').add({
+                  'user_email': user?.email,
+                  'user_uid': user?.uid,
+                  'items': itemsData,
+                  'subtotal': subtotal,
+                  'discount': discount,
+                  'shipping': shipping,
+                  'total': total,
+                  'status': 'Chờ xử lý',
+                  'created_at': FieldValue.serverTimestamp(),
+                });
+
+                // Dismiss loading
+                if (mounted) Navigator.of(context).pop();
+
+                // Clear cart
+                cart.clear();
+
+                // Show success dialog
+                if (mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: const Text('🎉 Đặt hàng thành công!', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
+                      content: const Text(
+                        'Đơn hàng của bạn đã được tiếp nhận và đang được xử lý. Cảm ơn bạn đã mua sắm tại Beauty & Glow!',
+                        style: TextStyle(fontFamily: 'DM Sans'),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Đóng', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontFamily: 'DM Sans')),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              } catch (e) {
+                // Dismiss loading
+                if (mounted) Navigator.of(context).pop();
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Đã có lỗi xảy ra: $e', style: const TextStyle(fontFamily: 'DM Sans')),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -481,12 +582,12 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 const Text(
                   'Thanh toán',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, fontFamily: 'DM Sans'),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  '${_formatPrice(_total)}đ',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  '${_formatPrice(total)}đ',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, fontFamily: 'DM Sans'),
                 ),
               ],
             ),
