@@ -125,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen>
           success ? 'Đã gửi email đặt lại mật khẩu.' : (context.read<AuthProvider>().errorMessage ?? 'Lỗi gửi email.'),
           style: const TextStyle(fontFamily: 'DM Sans'),
         ),
-        backgroundColor: success ? AppColors.primary : AppColors.error,
+        backgroundColor: success ? AppColors.success : AppColors.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -135,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       body: Column(
         children: [
           // ── Hero section (38% of screen) ──
@@ -168,33 +168,31 @@ class _LoginScreenState extends State<LoginScreen>
         gradient: RadialGradient(
           center: Alignment.center,
           radius: 1.0,
-          colors: [Color(0xFFFFF8F5), Color(0xFFFDE8EF)],
+          colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)], // Tech light blue gradient
         ),
       ),
       child: Stack(
         children: [
-          // Floating botanical element — top-left (spa icon)
+          // Floating tech elements
           _buildFloatingIcon(
             top: 48, left: 24,
-            icon: Icons.spa_outlined,
-            size: 38,
+            icon: Icons.phone_android_outlined,
+            size: 36,
             color: AppColors.primary,
             delay: 0.0,
           ),
-          // Floating botanical element — bottom-right (filter_vintage)
           _buildFloatingIcon(
             bottom: 56, right: 28,
-            icon: Icons.filter_vintage_outlined,
-            size: 30,
+            icon: Icons.headphones_outlined,
+            size: 32,
             color: AppColors.tertiary,
             delay: 0.33,
           ),
-          // Floating botanical element — top-right (yard)
           _buildFloatingIcon(
             top: 72, right: 56,
-            icon: Icons.yard_outlined,
-            size: 22,
-            color: const Color(0xFFE8547A),
+            icon: Icons.watch_outlined,
+            size: 26,
+            color: AppColors.primary,
             delay: 0.16,
           ),
 
@@ -207,8 +205,8 @@ class _LoginScreenState extends State<LoginScreen>
                 children: [
                   // Logo circle
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: 76,
+                    height: 76,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
@@ -221,27 +219,28 @@ class _LoginScreenState extends State<LoginScreen>
                       ],
                     ),
                     child: const Padding(
-                      padding: EdgeInsets.all(14),
-                      child: ShopLogo(size: 44),
+                      padding: EdgeInsets.all(12),
+                      child: ShopLogo(size: 48),
                     ),
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'Beauty & Glow',
+                    'MobileShop',
                     style: TextStyle(
-                      fontFamily: 'Playfair Display',
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
+                      fontFamily: 'DM Sans',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
                       color: AppColors.primary,
-                      letterSpacing: -0.3,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Vẻ đẹp tự nhiên, rạng rỡ mỗi ngày',
+                    'Thế giới điện thoại & phụ kiện chính hãng',
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 13,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.onSurfaceVariant,
                     ),
                   ),
@@ -277,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen>
           final offset = math.sin(phase * math.pi * 2) * 8.0;
           return Transform.translate(
             offset: Offset(0, offset),
-            child: Icon(icon, size: size, color: color.withOpacity(0.22)),
+            child: Icon(icon, size: size, color: color.withOpacity(0.25)),
           );
         },
       ),
@@ -294,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
-            color: Color(0x14E8547A),
+            color: Color(0x0F0F62FE),
             blurRadius: 24,
             offset: Offset(0, -4),
           ),
@@ -311,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen>
               const Text(
                 'Đăng nhập',
                 style: TextStyle(
-                  fontFamily: 'Playfair Display',
+                  fontFamily: 'DM Sans',
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: AppColors.onSurface,
@@ -380,7 +379,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     child: const Text(
                       'Quên mật khẩu?',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -488,16 +487,19 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               if (widget.onLoginSuccess == null) ...[
                 const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const MainShell()),
-                  ),
-                  child: const Text(
-                    'Tiếp tục không đăng nhập',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.onSurfaceVariant,
-                      fontFamily: 'DM Sans',
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const MainShell()),
+                    ),
+                    child: const Text(
+                      'Tiếp tục không đăng nhập',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.onSurfaceVariant,
+                        fontFamily: 'DM Sans',
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                 ),
@@ -528,7 +530,7 @@ class _LoginScreenState extends State<LoginScreen>
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
-          hint: 'ten@email.com',
+          hint: 'email@domain.com',
           prefix: Icons.mail_outline_rounded,
         ),
         validator: (v) {

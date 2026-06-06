@@ -73,21 +73,23 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 24),
               const Text(
-                'Beauty & Glow',
+                'MobileShop',
                 style: TextStyle(
-                  fontFamily: 'Playfair Display',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
+                  fontFamily: 'DM Sans',
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
                   color: AppColors.primary,
+                  letterSpacing: -0.5,
                 ),
               ),
               const SizedBox(height: 6),
               const Text(
-                'Vẻ đẹp tự nhiên, rạng rỡ mỗi ngày',
+                'Thế giới điện thoại & phụ kiện chính hãng',
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.onSurfaceVariant,
                   fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 48),

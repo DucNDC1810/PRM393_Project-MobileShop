@@ -11,25 +11,25 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final List<Map<String, dynamic>> _cartItems = [
     {
-      'name': 'Kem dưỡng ẩm Rose Glow',
-      'brand': 'Luminous Bloom',
+      'name': 'Ốp lưng Silicone MagSafe iPhone 15 Pro',
+      'brand': 'Apple',
       'price': 450000,
       'quantity': 1,
-      'emoji': '🌹',
+      'emoji': '📱',
     },
     {
-      'name': 'Son môi Velvet Bloom',
-      'brand': 'Beauty & Glow',
+      'name': 'Cáp sạc nhanh USB-C 20W',
+      'brand': 'MobileShop',
       'price': 285000,
       'quantity': 2,
-      'emoji': '💄',
+      'emoji': '🔌',
     },
     {
-      'name': 'Serum vitamin C sáng da',
-      'brand': 'Glow Lab',
+      'name': 'Tai nghe Bluetooth không dây Pro',
+      'brand': 'SoundTech',
       'price': 620000,
       'quantity': 1,
-      'emoji': '✨',
+      'emoji': '🎧',
     },
   ];
 

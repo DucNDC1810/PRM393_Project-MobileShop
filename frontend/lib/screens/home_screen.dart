@@ -84,12 +84,13 @@ class _HomeScreenState extends State<HomeScreen> {
           const ShopLogo(size: 32),
           const SizedBox(width: 8),
           const Text(
-            'Beauty & Glow',
+            'MobileShop',
             style: TextStyle(
-              fontFamily: 'Playfair Display',
+              fontFamily: 'DM Sans',
               fontSize: 22,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
               color: AppColors.primary,
+              letterSpacing: -0.5,
             ),
           ),
         ],

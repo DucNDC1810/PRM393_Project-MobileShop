@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 class ShopLogo extends StatelessWidget {
   final double size;
+  final Color? color;
 
-  const ShopLogo({super.key, this.size = 36});
+  const ShopLogo({super.key, this.size = 36, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -11,54 +12,89 @@ class ShopLogo extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _ShopLogoPainter(),
+        painter: _ShopLogoPainter(color: color),
       ),
     );
   }
 }
 
 class _ShopLogoPainter extends CustomPainter {
+  final Color? color;
+
+  _ShopLogoPainter({this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final double s = size.width;
     final scaleX = s / 80;
     final scaleY = s / 80;
 
-    // White circle background
-    final circlePaint = Paint()..color = Colors.white;
+    // Background circle (clean white/light blue tint)
+    final circlePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(s / 2, s / 2), s / 2, circlePaint);
 
-    // Petal / flower shape - pink (#E8547A)
-    final petalPaint = Paint()
-      ..color = const Color(0xFFE8547A)
+    // Tech blue/indigo color for the main body
+    final primaryColor = color ?? const Color(0xFF0F62FE);
+    final secondaryColor = const Color(0xFF3B82F6);
+
+    // Draw Phone Body
+    final phonePaint = Paint()
+      ..color = primaryColor
       ..style = PaintingStyle.fill;
 
-    final petalPath = Path();
-    // Translated path from SVG: M40 25C42 20 48 20 50 25C55 27 55 33 50 35C52 40 48 45 42 45C40 50 34 50 32 45C26 43 26 37 31 35C29 30 33 25 39 25
-    petalPath.moveTo(40 * scaleX, 25 * scaleY);
-    petalPath.cubicTo(42 * scaleX, 20 * scaleY, 48 * scaleX, 20 * scaleY, 50 * scaleX, 25 * scaleY);
-    petalPath.cubicTo(55 * scaleX, 27 * scaleY, 55 * scaleX, 33 * scaleY, 50 * scaleX, 35 * scaleY);
-    petalPath.cubicTo(52 * scaleX, 40 * scaleY, 48 * scaleX, 45 * scaleY, 42 * scaleX, 45 * scaleY);
-    petalPath.cubicTo(40 * scaleX, 50 * scaleY, 34 * scaleX, 50 * scaleY, 32 * scaleX, 45 * scaleY);
-    petalPath.cubicTo(26 * scaleX, 43 * scaleY, 26 * scaleX, 37 * scaleY, 31 * scaleX, 35 * scaleY);
-    petalPath.cubicTo(29 * scaleX, 30 * scaleY, 33 * scaleX, 25 * scaleY, 39 * scaleX, 25 * scaleY);
-    petalPath.close();
-    canvas.drawPath(petalPath, petalPaint);
+    // Draw phone body (rounded rectangle)
+    final phoneRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(26 * scaleX, 16 * scaleY, 28 * scaleX, 48 * scaleY),
+      Radius.circular(6 * scaleX),
+    );
+    canvas.drawRRect(phoneRect, phonePaint);
 
-    // Inner highlight - light pink (#FDE8EF)
-    final highlightPaint = Paint()
-      ..color = const Color(0xFFFDE8EF)
+    // Draw Phone Screen (inner rectangle)
+    final screenPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    final screenRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(29 * scaleX, 22 * scaleY, 22 * scaleX, 36 * scaleY),
+      Radius.circular(3 * scaleX),
+    );
+    canvas.drawRRect(screenRect, screenPaint);
+
+    // Draw Notch
+    final notchPaint = Paint()
+      ..color = primaryColor
+      ..style = PaintingStyle.fill;
+    final notchRect = RRect.fromRectAndCorners(
+      Rect.fromLTWH(36 * scaleX, 16 * scaleY, 8 * scaleX, 3 * scaleY),
+      bottomLeft: Radius.circular(2 * scaleX),
+      bottomRight: Radius.circular(2 * scaleX),
+    );
+    canvas.drawRRect(notchRect, notchPaint);
+
+    // Draw a shopping cart / lightning bolt inside the screen to represent commerce/speed
+    final accentPaint = Paint()
+      ..color = secondaryColor
       ..style = PaintingStyle.fill;
 
-    final highlightPath = Path();
-    // M40 33C40 33 42 30 45 32C48 34 45 38 40 37C35 38 32 34 35 32C38 30 40 33 40 33Z
-    highlightPath.moveTo(40 * scaleX, 33 * scaleY);
-    highlightPath.cubicTo(40 * scaleX, 33 * scaleY, 42 * scaleX, 30 * scaleY, 45 * scaleX, 32 * scaleY);
-    highlightPath.cubicTo(48 * scaleX, 34 * scaleY, 45 * scaleX, 38 * scaleY, 40 * scaleX, 37 * scaleY);
-    highlightPath.cubicTo(35 * scaleX, 38 * scaleY, 32 * scaleX, 34 * scaleY, 35 * scaleX, 32 * scaleY);
-    highlightPath.cubicTo(38 * scaleX, 30 * scaleY, 40 * scaleX, 33 * scaleY, 40 * scaleX, 33 * scaleY);
-    highlightPath.close();
-    canvas.drawPath(highlightPath, highlightPaint);
+    final cartPath = Path();
+    // A simplified sleek shopping cart icon
+    cartPath.moveTo(33 * scaleX, 27 * scaleY);
+    cartPath.lineTo(36 * scaleX, 27 * scaleY);
+    cartPath.lineTo(38 * scaleX, 38 * scaleY);
+    cartPath.lineTo(47 * scaleX, 38 * scaleY);
+    cartPath.lineTo(49 * scaleX, 30 * scaleY);
+    cartPath.lineTo(37 * scaleX, 30 * scaleY);
+    canvas.drawPath(cartPath, Paint()
+      ..color = secondaryColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * scaleX
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round);
+
+    // Wheels of the cart
+    canvas.drawCircle(Offset(39 * scaleX, 42 * scaleY), 2.5 * scaleX, accentPaint);
+    canvas.drawCircle(Offset(46 * scaleX, 42 * scaleY), 2.5 * scaleX, accentPaint);
   }
 
   @override
