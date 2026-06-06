@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Dưỡng da',
     'Trang điểm',
     'Nước hoa',
-    'Tóc & Móng',
+    'Phụ kiện',
   ];
 
   final List<String?> _categoryValues = [
@@ -31,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'skincare',
     'makeup',
     'perfume',
-    'hair',
+    'accessories',
   ];
 
   @override
@@ -84,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const ShopLogo(size: 32),
           const SizedBox(width: 8),
           const Text(
-            'MobileShop',
+            'Beauty & Glow',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontSize: 22,
@@ -174,9 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             title,
             style: const TextStyle(
-              fontFamily: 'Playfair Display',
+              fontFamily: 'DM Sans',
               fontSize: 18,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w800,
               color: AppColors.onSurface,
             ),
           ),
@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: const Text(
               'Xem tất cả',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, fontFamily: 'DM Sans'),
             ),
           ),
         ],
@@ -230,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisCount: 2,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.72,
+          childAspectRatio: 0.68,
         ),
         itemCount: featured.length,
         itemBuilder: (context, index) => ProductCard(product: featured[index]),
@@ -243,12 +243,19 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [AppColors.primary, AppColors.primaryContainer],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -259,19 +266,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Text(
                   'Flash Sale',
                   style: TextStyle(
-                    fontFamily: 'Playfair Display',
+                    fontFamily: 'DM Sans',
                     fontSize: 22,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Giảm đến 50% • Hôm nay thôi!',
+                  'Giảm đến 50% • Chỉ trong hôm nay!',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.white70,
                     fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -286,8 +294,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     textStyle: const TextStyle(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       fontSize: 13,
+                      fontFamily: 'DM Sans',
                     ),
                   ),
                   child: const Text('Mua ngay'),
@@ -295,70 +304,52 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const Text('🛍️', style: TextStyle(fontSize: 64)),
+          const Text('⚡', style: TextStyle(fontSize: 64)),
         ],
       ),
     );
   }
 
   Widget _buildHorizontalProductList() {
-    final newProducts = [
-      {'name': 'Toner Hoa Hồng', 'price': 195000, 'emoji': '🌸'},
-      {'name': 'Mask ngủ dưỡng ẩm', 'price': 240000, 'emoji': '🫧'},
-      {'name': 'Dầu dưỡng tóc', 'price': 310000, 'emoji': '💆'},
-      {'name': 'Nước hoa mini', 'price': 180000, 'emoji': '🌺'},
-    ];
+    final products = context.watch<ProductProvider>().products;
+
+    if (products.isEmpty) {
+      return const SizedBox(
+        height: 160,
+        child: Center(
+          child: Text(
+            'Không có sản phẩm mới',
+            style: TextStyle(fontFamily: 'DM Sans', color: AppColors.onSurfaceVariant),
+          ),
+        ),
+      );
+    }
+
+    // Filter products with 'new' tag or just take 4
+    final newProducts = products.where((p) {
+      final tags = p['tags'];
+      if (tags is List) {
+        return tags.contains('new');
+      }
+      return false;
+    }).toList();
+
+    final displayProducts = newProducts.isNotEmpty 
+        ? newProducts 
+        : products.reversed.take(4).toList();
 
     return SizedBox(
-      height: 160,
+      height: 260,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: newProducts.length,
+        itemCount: displayProducts.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final p = newProducts[index];
-          return Container(
-            width: 130,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.outlineVariant),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Text(
-                    p['emoji'] as String,
-                    style: const TextStyle(fontSize: 40),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  p['name'] as String,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.onSurface,
-                    fontFamily: 'DM Sans',
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const Spacer(),
-                Text(
-                  '${_formatPrice(p['price'] as int)}đ',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                    fontFamily: 'DM Sans',
-                  ),
-                ),
-              ],
-            ),
+          final p = displayProducts[index];
+          return SizedBox(
+            width: 155,
+            child: ProductCard(product: p),
           );
         },
       ),

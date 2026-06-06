@@ -68,6 +68,48 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> loginWithGoogle() async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.signInWithGoogle();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _errorMessage = _mapFirebaseError(e.code);
+      _status = AuthStatus.error;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Đăng nhập Google thất bại.';
+      _status = AuthStatus.error;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> loginWithFacebook() async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.signInWithFacebook();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _errorMessage = _mapFirebaseError(e.code);
+      _status = AuthStatus.error;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Đăng nhập Facebook thất bại.';
+      _status = AuthStatus.error;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     await _service.logout();
   }

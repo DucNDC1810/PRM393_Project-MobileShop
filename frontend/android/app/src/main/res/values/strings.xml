@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Beauty &amp; Glow</string>
+    <!-- Replace these placeholder values with your real Facebook App configurations -->
+    <string name="facebook_app_id">2143816136406013</string>
+    <string name="fb_login_protocol_scheme">fb2143816136406013</string>
+    <string name="facebook_client_token">7e71c93b9386cd1dd7e5c65176b8ef45</string>
+</resources>

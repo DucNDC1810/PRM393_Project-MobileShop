@@ -104,6 +104,68 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isLoading = true);
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.loginWithGoogle();
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (success) {
+      if (widget.onLoginSuccess != null) {
+        widget.onLoginSuccess!();
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainShell(isLoggedIn: true)),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ?? 'Đăng nhập Google thất bại.',
+            style: const TextStyle(fontFamily: 'DM Sans'),
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleFacebookLogin() async {
+    setState(() => _isLoading = true);
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.loginWithFacebook();
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (success) {
+      if (widget.onLoginSuccess != null) {
+        widget.onLoginSuccess!();
+        Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainShell(isLoggedIn: true)),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ?? 'Đăng nhập Facebook thất bại.',
+            style: const TextStyle(fontFamily: 'DM Sans'),
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleForgotPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
@@ -134,27 +196,30 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          // ── Hero section (38% of screen) ──
-          Expanded(
-            flex: 38,
-            child: _buildHero(),
-          ),
-          // ── Login card (62%) ──
-          Expanded(
-            flex: 62,
-            child: FadeTransition(
-              opacity: _cardFadeAnim,
-              child: SlideTransition(
-                position: _cardSlideAnim,
-                child: _buildLoginCard(),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Column(
+          children: [
+            // ── Hero section (38% of screen) ──
+            Expanded(
+              flex: 38,
+              child: _buildHero(),
+            ),
+            // ── Login card (62%) ──
+            Expanded(
+              flex: 62,
+              child: FadeTransition(
+                opacity: _cardFadeAnim,
+                child: SlideTransition(
+                  position: _cardSlideAnim,
+                  child: _buildLoginCard(),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -168,29 +233,29 @@ class _LoginScreenState extends State<LoginScreen>
         gradient: RadialGradient(
           center: Alignment.center,
           radius: 1.0,
-          colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)], // Tech light blue gradient
+          colors: [Color(0xFFFFF5F8), Color(0xFFFDEAF0)], // Soft blush pink radial gradient
         ),
       ),
       child: Stack(
         children: [
-          // Floating tech elements
+          // Floating beauty elements
           _buildFloatingIcon(
             top: 48, left: 24,
-            icon: Icons.phone_android_outlined,
+            icon: Icons.spa,
             size: 36,
             color: AppColors.primary,
             delay: 0.0,
           ),
           _buildFloatingIcon(
             bottom: 56, right: 28,
-            icon: Icons.headphones_outlined,
+            icon: Icons.brush,
             size: 32,
-            color: AppColors.tertiary,
+            color: AppColors.secondary,
             delay: 0.33,
           ),
           _buildFloatingIcon(
             top: 72, right: 56,
-            icon: Icons.watch_outlined,
+            icon: Icons.local_florist,
             size: 26,
             color: AppColors.primary,
             delay: 0.16,
@@ -225,7 +290,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'MobileShop',
+                    'Beauty & Glow',
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 28,
@@ -236,7 +301,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Thế giới điện thoại & phụ kiện chính hãng',
+                    'Thế giới mỹ phẩm & chăm sóc sắc đẹp chính hãng',
                     style: TextStyle(
                       fontFamily: 'DM Sans',
                       fontSize: 13,
@@ -446,9 +511,9 @@ class _LoginScreenState extends State<LoginScreen>
               // Social buttons
               Row(
                 children: [
-                  Expanded(child: _socialBtn('Google', '🇬')),
+                  Expanded(child: _socialBtn('Google', '🇬', onTap: _handleGoogleLogin)),
                   const SizedBox(width: 12),
-                  Expanded(child: _socialBtn('Facebook', '🇫')),
+                  Expanded(child: _socialBtn('Facebook', '🇫', onTap: _handleFacebookLogin)),
                 ],
               ),
               const SizedBox(height: 20),
@@ -610,8 +675,8 @@ class _LoginScreenState extends State<LoginScreen>
             fontSize: 11, color: AppColors.error, fontFamily: 'DM Sans'),
       );
 
-  Widget _socialBtn(String label, String emoji) => OutlinedButton(
-        onPressed: () {},
+  Widget _socialBtn(String label, String emoji, {VoidCallback? onTap}) => OutlinedButton(
+        onPressed: onTap,
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.onSurface,
           side: const BorderSide(color: AppColors.outlineVariant),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shop_logo.dart';
 
@@ -28,7 +30,12 @@ class _SplashScreenState extends State<SplashScreen>
 
     Future.delayed(const Duration(milliseconds: 2000), () {
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        final auth = context.read<AuthProvider>();
+        if (auth.isLoggedIn) {
+          Navigator.of(context).pushReplacementNamed('/home');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
       }
     });
   }
@@ -73,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 24),
               const Text(
-                'MobileShop',
+                'Beauty & Glow',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 32,
@@ -84,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 6),
               const Text(
-                'Thế giới điện thoại & phụ kiện chính hãng',
+                'Thế giới mỹ phẩm & chăm sóc sắc đẹp chính hãng',
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.onSurfaceVariant,

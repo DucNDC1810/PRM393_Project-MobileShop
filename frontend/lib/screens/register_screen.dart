@@ -101,9 +101,11 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Stack(
         children: [
           // Background ornaments
           Positioned(
@@ -158,8 +160,9 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ── LOGO ──────────────────────────────────────────────────────────────────
 
@@ -202,7 +205,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         ),
         SizedBox(height: 6),
         Text(
-          'Tham gia cùng chúng tôi để nhận ưu đãi công nghệ đặc quyền.',
+          'Tham gia cùng chúng tôi để nhận ưu đãi mỹ phẩm đặc quyền.',
           style: TextStyle(
             fontSize: 14,
             color: AppColors.onSurfaceVariant,
@@ -256,7 +259,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             const SizedBox(height: 6),
             _buildField(
               controller: _emailCtrl,
-              hint: 'example@mobileshop.com',
+              hint: 'example@beautyglow.com',
               prefixIcon: Icons.mail_outline_rounded,
               keyboardType: TextInputType.emailAddress,
               action: TextInputAction.next,

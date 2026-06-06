@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -36,6 +38,88 @@ class AuthService {
     });
 
     return credential;
+  }
+
+  Future<UserCredential> signInWithGoogle() async {
+    // 1. Trigger the Google Authentication flow (opens account selector pop-up)
+    final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
+
+    if (googleUser == null) {
+      throw FirebaseAuthException(
+        code: 'sign-in-cancelled',
+        message: 'Đăng nhập Google bị hủy bởi người dùng.',
+      );
+    }
+
+    // 2. Obtain the auth details from the request
+    final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+    final String? idToken = googleAuth.idToken;
+
+    // 3. Obtain the access token by authorizing scopes
+    final clientAuth = await googleUser.authorizationClient.authorizeScopes(['email', 'profile']);
+    final String? accessToken = clientAuth.accessToken;
+
+    // 4. Create a new credential
+    final OAuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: accessToken,
+      idToken: idToken,
+    );
+
+    // 4. Authenticate with Firebase using the Google credential
+    final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+    // 5. Store / update user profile in Firestore
+    if (userCredential.user != null) {
+      await _db.collection('users').doc(userCredential.user!.uid).set({
+        'name': userCredential.user!.displayName ?? googleUser.displayName ?? 'Google User',
+        'email': userCredential.user!.email ?? googleUser.email,
+        'phone': userCredential.user!.phoneNumber ?? '',
+        'created_at': FieldValue.serverTimestamp(),
+        'last_login': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
+    return userCredential;
+  }
+
+  Future<UserCredential> signInWithFacebook() async {
+    // 1. Trigger the Facebook login flow
+    final LoginResult result = await FacebookAuth.instance.login(
+      permissions: ['email', 'public_profile'],
+    );
+
+    if (result.status != LoginStatus.success) {
+      throw FirebaseAuthException(
+        code: 'sign-in-failed',
+        message: result.message ?? 'Đăng nhập Facebook thất bại.',
+      );
+    }
+
+    // 2. Get the AccessToken from Facebook login result
+    final AccessToken accessTokenObj = result.accessToken!;
+
+    // 3. Create a credential for Firebase Auth
+    final OAuthCredential credential = FacebookAuthProvider.credential(accessTokenObj.tokenString);
+
+    // 4. Authenticate with Firebase using the credential
+    final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+    // 5. Save/Update user profile in Firestore
+    if (userCredential.user != null) {
+      final Map<String, dynamic> userData = await FacebookAuth.instance.getUserData();
+      final String name = userData['name'] ?? userCredential.user!.displayName ?? 'Facebook User';
+      final String email = userData['email'] ?? userCredential.user!.email ?? 'facebook.user@beautyglow.com';
+
+      await _db.collection('users').doc(userCredential.user!.uid).set({
+        'name': name,
+        'email': email,
+        'phone': userCredential.user!.phoneNumber ?? '',
+        'created_at': FieldValue.serverTimestamp(),
+        'last_login': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+
+    return userCredential;
   }
 
   Future<void> logout() async {

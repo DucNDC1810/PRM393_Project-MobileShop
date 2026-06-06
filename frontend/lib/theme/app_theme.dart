@@ -1,55 +1,56 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Sleek tech blue/indigo color palette
-  static const primary = Color(0xFF0F62FE); // Vibrant Tech Blue
+  // Beauty & Glow pink blush and rose gold/pink luxury palette
+  static const primary = Color(0xFFD1557A); // Beautiful brand rose pink
   static const onPrimary = Color(0xFFFFFFFF);
-  static const primaryContainer = Color(0xFF1E3A8A); // Deep Navy
-  static const onPrimaryContainer = Color(0xFFFFFFFF);
-  static const primaryFixed = Color(0xFFD8E4FF);
-  static const primaryFixedDim = Color(0xFFADC8FF);
-  static const inversePrimary = Color(0xFFADC8FF);
+  static const primaryContainer = Color(0xFFFCDCE5); // Soft blush pink container
+  static const onPrimaryContainer = Color(0xFF520E22); // Dark rose/plum text
+  static const primaryFixed = Color(0xFFFDEAF0); // Very light blush
+  static const primaryFixedDim = Color(0xFFFADAE5);
+  static const inversePrimary = Color(0xFFFADAE5);
 
-  static const secondary = Color(0xFF475569); // Slate Grey
+  static const secondary = Color(0xFF665C61); // Muted Plum/Slate
   static const onSecondary = Color(0xFFFFFFFF);
-  static const secondaryContainer = Color(0xFFE2E8F0);
-  static const onSecondaryContainer = Color(0xFF1E293B);
-  static const secondaryFixed = Color(0xFFE2E8F0);
-  static const secondaryFixedDim = Color(0xFFCBD5E1);
+  static const secondaryContainer = Color(0xFFEADCE2);
+  static const onSecondaryContainer = Color(0xFF6A6065);
+  static const secondaryFixed = Color(0xFFEDDFE5);
+  static const secondaryFixedDim = Color(0xFFD1C3C9);
 
-  static const tertiary = Color(0xFF0EA5E9); // Sky Blue
+  static const tertiary = Color(0xFF605E5D);
   static const onTertiary = Color(0xFFFFFFFF);
-  static const tertiaryContainer = Color(0xFF0369A1);
-  static const onTertiaryContainer = Color(0xFFFFFFFF);
-  static const tertiaryFixed = Color(0xFFE0F2FE);
-  static const tertiaryFixedDim = Color(0xFFBAE6FD);
+  static const tertiaryContainer = Color(0xFFA29F9D);
+  static const onTertiaryContainer = Color(0xFF383635);
+  static const tertiaryFixed = Color(0xFFE6E1E0);
+  static const tertiaryFixedDim = Color(0xFFCAC6C4);
 
-  static const error = Color(0xFFEF4444);
+  static const error = Color(0xFFBA1A1A);
   static const onError = Color(0xFFFFFFFF);
-  static const errorContainer = Color(0xFFFEE2E2);
-  static const onErrorContainer = Color(0xFF991B1B);
+  static const errorContainer = Color(0xFFFFDAD6);
+  static const onErrorContainer = Color(0xFF93000A);
 
-  static const background = Color(0xFFF8FAFC); // Very light slate blue-grey
-  static const onBackground = Color(0xFF0F172A); // Dark slate
-  static const surface = Color(0xFFFFFFFF);
-  static const onSurface = Color(0xFF0F172A);
-  static const surfaceVariant = Color(0xFFE2E8F0);
-  static const onSurfaceVariant = Color(0xFF475569);
-  static const surfaceDim = Color(0xFFF1F5F9);
-  static const surfaceBright = Color(0xFFF8FAFC);
+  // Background is soft blush pink floor matching the brand
+  static const background = Color(0xFFF9EAF0); // Blush Pink Floor
+  static const onBackground = Color(0xFF1B1C1A);
+  static const surface = Color(0xFFFFFAF8); // Cream White Surface
+  static const onSurface = Color(0xFF1B1C1A);
+  static const surfaceVariant = Color(0xFFE5E2DF);
+  static const onSurfaceVariant = Color(0xFF51443C);
+  static const surfaceDim = Color(0xFFDCDAD6);
+  static const surfaceBright = Color(0xFFFCF9F5);
   static const surfaceContainerLowest = Color(0xFFFFFFFF);
-  static const surfaceContainerLow = Color(0xFFF1F5F9);
-  static const surfaceContainer = Color(0xFFE2E8F0);
-  static const surfaceContainerHigh = Color(0xFFCBD5E1);
-  static const surfaceContainerHighest = Color(0xFF94A3B8);
+  static const surfaceContainerLow = Color(0xFFF6F3F0);
+  static const surfaceContainer = Color(0xFFF0EDEA);
+  static const surfaceContainerHigh = Color(0xFFEAE8E4);
+  static const surfaceContainerHighest = Color(0xFFE5E2DF);
 
-  static const outline = Color(0xFF94A3B8);
-  static const outlineVariant = Color(0xFFCBD5E1);
-  static const inverseSurface = Color(0xFF1E293B);
-  static const inverseOnSurface = Color(0xFFF8FAFC);
-  static const surfaceTint = Color(0xFF0F62FE);
+  static const outline = Color(0xFF83746B);
+  static const outlineVariant = Color(0xFFD5C3B8);
+  static const inverseSurface = Color(0xFF30302E);
+  static const inverseOnSurface = Color(0xFFF3F0ED);
+  static const surfaceTint = Color(0xFFD1557A);
 
-  static const success = Color(0xFF10B981); // Emerald Green
+  static const success = Color(0xFF065F46); // Emerald Green for completed status
 }
 
 class AppTheme {
