@@ -9,6 +9,8 @@ import 'my_orders_screen.dart';
 import 'store_location_screen.dart';
 import 'notifications_screen.dart';
 import 'chat_screen.dart';
+import 'edit_profile_screen.dart';
+import 'change_password_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, this.isLoggedIn = false});
@@ -31,7 +33,11 @@ class ProfileScreen extends StatelessWidget {
                 _buildProfileHeader(user),
                 _buildLoyaltyCard(),
                 _buildMenuSection('Tài khoản', [
-                  _MenuItem(Icons.person_outline, 'Thông tin cá nhân', () {}),
+                  _MenuItem(Icons.person_outline, 'Thông tin cá nhân', () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                    );
+                  }),
                   _MenuItem(Icons.location_on_outlined, 'Hệ thống cửa hàng', () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const StoreLocationScreen()),
@@ -54,7 +60,11 @@ class ProfileScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const NotificationsScreen()),
                     );
                   }),
-                  _MenuItem(Icons.lock_outline, 'Bảo mật', () {}),
+                  _MenuItem(Icons.lock_outline, 'Bảo mật', () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+                    );
+                  }),
                   _MenuItem(Icons.help_outline, 'Hỗ trợ trực tuyến', () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ChatScreen()),

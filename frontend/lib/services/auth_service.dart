@@ -129,4 +129,46 @@ class AuthService {
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email.trim());
   }
+
+  /// Update display name and phone in Firestore + Firebase Auth
+  Future<void> updateProfile({
+    required String name,
+    required String phone,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('Chưa đăng nhập.');
+
+    // Update displayName in Firebase Auth
+    await user.updateDisplayName(name);
+
+    // Update Firestore document
+    await _db.collection('users').doc(user.uid).set({
+      'name': name,
+      'phone': phone,
+      'updated_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // Reload user to get fresh data
+    await user.reload();
+  }
+
+  /// Re-authenticate then change password
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('Chưa đăng nhập.');
+    if (user.email == null) throw Exception('Tài khoản không có email.');
+
+    // Re-authenticate first
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+
+    // Update password
+    await user.updatePassword(newPassword);
+  }
 }
