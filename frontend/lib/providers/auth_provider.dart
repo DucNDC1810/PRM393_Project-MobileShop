@@ -125,6 +125,52 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Update user profile (name, phone)
+  Future<bool> updateProfile({
+    required String name,
+    required String phone,
+  }) async {
+    _errorMessage = null;
+    try {
+      await _service.updateProfile(name: name, phone: phone);
+      // Refresh the user object so UI rebuilds with latest displayName
+      _user = _service.currentUser;
+      notifyListeners();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _errorMessage = _mapFirebaseError(e.code);
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Cập nhật thất bại. Vui lòng thử lại.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Change password (re-authenticates with current password first)
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _errorMessage = null;
+    try {
+      await _service.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _errorMessage = _mapChangePasswordError(e.code);
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
+      notifyListeners();
+      return false;
+    }
+  }
+
   void clearError() {
     _errorMessage = null;
     notifyListeners();
@@ -150,6 +196,24 @@ class AuthProvider extends ChangeNotifier {
         return 'Email hoặc mật khẩu không đúng.';
       default:
         return 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+    }
+  }
+
+  String _mapChangePasswordError(String code) {
+    switch (code) {
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Mật khẩu hiện tại không đúng.';
+      case 'weak-password':
+        return 'Mật khẩu mới quá yếu, cần ít nhất 6 ký tự.';
+      case 'requires-recent-login':
+        return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng xuất và đăng nhập lại.';
+      case 'too-many-requests':
+        return 'Quá nhiều lần thử. Vui lòng thử lại sau.';
+      case 'network-request-failed':
+        return 'Lỗi kết nối mạng. Vui lòng kiểm tra internet.';
+      default:
+        return 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
     }
   }
 }
