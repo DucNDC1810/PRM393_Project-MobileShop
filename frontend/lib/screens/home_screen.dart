@@ -6,6 +6,7 @@ import '../widgets/product_card.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/promo_banner.dart';
 import '../widgets/shop_logo.dart';
+import 'products_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -57,10 +58,24 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const PromoBanner(),
                 _buildCategorySection(),
-                _buildSectionHeader('Nổi bật hôm nay', onSeeAll: () {}),
+                _buildSectionHeader(
+                  'Nổi bật hôm nay',
+                  onSeeAll: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProductsScreen()),
+                    );
+                  },
+                ),
                 _buildFeaturedGrid(),
                 _buildFlashSaleSection(),
-                _buildSectionHeader('Mới nhất', onSeeAll: () {}),
+                _buildSectionHeader(
+                  'Mới nhất',
+                  onSeeAll: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProductsScreen()),
+                    );
+                  },
+                ),
                 _buildHorizontalProductList(),
                 const SizedBox(height: 100),
               ],
@@ -226,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.symmetric(vertical: 15),
+        padding: const EdgeInsets.only(top: 10, bottom: 16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 12,
