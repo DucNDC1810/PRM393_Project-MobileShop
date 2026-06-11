@@ -67,7 +67,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: _buildSearchBar(),
               ),
             ),
@@ -105,7 +105,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -195,7 +195,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       child: Row(
         children: [
           Expanded(
@@ -238,13 +238,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       ),
                     );
                   }),
-                  if (categories.isNotEmpty)
-                    Container(
-                      height: 20,
-                      width: 1,
-                      color: AppColors.outlineVariant.withOpacity(0.5),
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
                   _filterChip(
                     provider.selectedBrand ?? 'Thương hiệu',
                     Icons.arrow_drop_down,
