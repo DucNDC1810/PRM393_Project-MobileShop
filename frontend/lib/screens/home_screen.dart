@@ -147,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategorySection() {
     return SizedBox(
-      height: 50,
+      height: 45,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -167,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSectionHeader(String title, {VoidCallback? onSeeAll}) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -226,6 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.symmetric(vertical: 15),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 12,
