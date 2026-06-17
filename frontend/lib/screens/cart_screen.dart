@@ -7,7 +7,8 @@ import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
 
 class CartScreen extends StatefulWidget {
-  const CartScreen({super.key});
+  final VoidCallback? onShopNowPressed;
+  const CartScreen({super.key, this.onShopNowPressed});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
@@ -88,9 +89,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {
-              // Switch to products tab
-            },
+            onPressed: widget.onShopNowPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
