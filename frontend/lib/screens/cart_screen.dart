@@ -180,10 +180,7 @@ class _CartScreenState extends State<CartScreen> {
               color: AppColors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
-              child: Text(item['emoji'] as String,
-                  style: const TextStyle(fontSize: 36)),
-            ),
+            child: _buildCartItemImage(item),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -514,6 +511,8 @@ class _CartScreenState extends State<CartScreen> {
                   'price': item['price'],
                   'quantity': item['quantity'],
                   'emoji': item['emoji'],
+                  'images': item['images'],
+                  'image_url': item['image_url'],
                 }).toList();
 
                 await FirebaseFirestore.instance.collection('orders').add({
@@ -598,5 +597,52 @@ class _CartScreenState extends State<CartScreen> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (m) => '${m[1]}.',
         );
+  }
+
+  Widget _buildCartItemImage(Map<String, dynamic> item) {
+    final images = item['images'];
+    String? imageUrl;
+    if (images is List && images.isNotEmpty) {
+      imageUrl = images.first?.toString();
+    } else if (item['image_url'] != null) {
+      imageUrl = item['image_url'].toString();
+    }
+    final emoji = item['emoji'] as String? ?? '✨';
+
+    if (imageUrl != null && imageUrl.startsWith('http')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          imageUrl,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Text(
+                emoji,
+                style: const TextStyle(fontSize: 32),
+              ),
+            );
+          },
+        ),
+      );
+    }
+    return Center(
+      child: Text(
+        emoji,
+        style: const TextStyle(fontSize: 32),
+      ),
+    );
   }
 }

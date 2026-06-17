@@ -53,6 +53,8 @@ class CartProvider extends ChangeNotifier {
         'category': product['category'] ?? '',
         'price': activePrice,
         'quantity': quantity,
+        'images': product['images'],
+        'image_url': product['image_url'],
       };
     }
     notifyListeners();
