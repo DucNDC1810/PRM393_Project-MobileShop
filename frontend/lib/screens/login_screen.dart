@@ -592,7 +592,7 @@ class _LoginScreenState extends State<LoginScreen>
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
-          hint: '••••••••',
+          hint: 'Nhập mật khẩu',
           prefix: Icons.lock_outline_rounded,
           suffix: GestureDetector(
             onTap: () => setState(() => _obscurePassword = !_obscurePassword),

@@ -350,7 +350,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       const SizedBox(height: 6),
                       _buildPasswordField(
                         controller: _passCtrl,
-                        hint: '••••••••',
+                        hint: 'Nhập mật khẩu',
                         prefixIcon: Icons.lock_outline_rounded,
                         obscure: _obscurePass,
                         onToggle: () =>
@@ -376,7 +376,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       const SizedBox(height: 6),
                       _buildPasswordField(
                         controller: _confirmCtrl,
-                        hint: '••••••••',
+                        hint: 'Nhập lại mật khẩu',
                         prefixIcon: Icons.lock_reset_outlined,
                         obscure: _obscureConfirm,
                         onToggle: () =>
