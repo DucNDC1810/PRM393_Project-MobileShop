@@ -7,6 +7,7 @@ import '../providers/product_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/product_card.dart';
+import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final VoidCallback? onShopNowPressed;
@@ -514,7 +515,7 @@ class _CartScreenState extends State<CartScreen> {
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               final auth = context.read<AuthProvider>();
               if (!auth.isLoggedIn) {
                 CustomToast.showError(
@@ -524,75 +525,11 @@ class _CartScreenState extends State<CartScreen> {
                 return;
               }
 
-              // Show loading dialog
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CheckoutScreen(discount: discount),
+                ),
               );
-
-              try {
-                final user = auth.user;
-                final itemsData = cartItems.map((item) => {
-                  'id': item['id'],
-                  'name': item['name'],
-                  'brand': item['brand'],
-                  'price': item['price'],
-                  'quantity': item['quantity'],
-                  'emoji': item['emoji'],
-                  'images': item['images'],
-                  'image_url': item['image_url'],
-                }).toList();
-
-                await FirebaseFirestore.instance.collection('orders').add({
-                  'user_email': user?.email,
-                  'user_uid': user?.uid,
-                  'items': itemsData,
-                  'subtotal': subtotal,
-                  'discount': discount,
-                  'shipping': shipping,
-                  'total': total,
-                  'status': 'Chờ xử lý',
-                  'created_at': FieldValue.serverTimestamp(),
-                });
-
-                // Dismiss loading
-                if (mounted) Navigator.of(context).pop();
-
-                // Clear cart
-                cart.clear();
-
-                // Show success dialog
-                if (mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: const Text('🎉 Đặt hàng thành công!', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
-                      content: const Text(
-                        'Đơn hàng của bạn đã được tiếp nhận và đang được xử lý. Cảm ơn bạn đã mua sắm tại Beauty & Glow!',
-                        style: TextStyle(fontFamily: 'DM Sans'),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text('Đóng', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontFamily: 'DM Sans')),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              } catch (e) {
-                // Dismiss loading
-                if (mounted) Navigator.of(context).pop();
-                
-                if (mounted) {
-                  CustomToast.showError(
-                    context,
-                    'Đã có lỗi xảy ra: $e',
-                  );
-                }
-              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
