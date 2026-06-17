@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/product_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
+import '../widgets/product_card.dart';
 
 class CartScreen extends StatefulWidget {
   final VoidCallback? onShopNowPressed;
@@ -17,6 +19,17 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   String _couponCode = '';
   bool _couponApplied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final productProvider = context.read<ProductProvider>();
+      if (productProvider.products.isEmpty) {
+        productProvider.loadProducts();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +66,17 @@ class _CartScreenState extends State<CartScreen> {
             ),
         ],
       ),
-      body: cartItems.isEmpty 
-          ? _buildEmptyCart() 
-          : _buildCartContent(cart, cartItems, subtotal, discount, shipping, total),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            if (cartItems.isEmpty)
+              _buildEmptyCart()
+            else
+              _buildCartContent(cart, cartItems, subtotal, discount, shipping, total),
+            _buildSuggestionsSection(),
+          ],
+        ),
+      ),
       bottomNavigationBar: cartItems.isEmpty 
           ? null 
           : _buildCheckoutBar(cart, cartItems, subtotal, discount, shipping, total),
@@ -63,29 +84,31 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildEmptyCart() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text('🛒', style: TextStyle(fontSize: 80)),
           const SizedBox(height: 16),
           const Text(
-            'Giỏ hàng trống',
+            'Giỏ hàng của bạn đang trống',
             style: TextStyle(
               fontFamily: 'DM Sans',
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
               color: AppColors.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Hãy thêm sản phẩm yêu thích vào giỏ hàng',
+            'Khám phá và thêm sản phẩm yêu thích nhé! Hàng ngàn ưu đãi làm đẹp đang chờ đón bạn.',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: AppColors.onSurfaceVariant,
               fontFamily: 'DM Sans',
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -98,9 +121,16 @@ class _CartScreenState extends State<CartScreen> {
                   borderRadius: BorderRadius.circular(24)),
               elevation: 0,
             ),
-            child: const Text(
-              'Mua sắm ngay',
-              style: TextStyle(fontWeight: FontWeight.w700, fontFamily: 'DM Sans'),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.shopping_bag_outlined, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Mua sắm ngay',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontFamily: 'DM Sans'),
+                ),
+              ],
             ),
           ),
         ],
@@ -116,7 +146,7 @@ class _CartScreenState extends State<CartScreen> {
     int shipping, 
     int total,
   ) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,6 +626,75 @@ class _CartScreenState extends State<CartScreen> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (m) => '${m[1]}.',
         );
+  }
+
+  Widget _buildSuggestionsSection() {
+    final productProvider = context.watch<ProductProvider>();
+    final products = productProvider.products;
+
+    if (products.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Take up to 6 products as suggestions
+    final suggestions = products.take(6).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Gợi ý cho bạn',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.onSurface,
+                ),
+              ),
+              TextButton(
+                onPressed: widget.onShopNowPressed,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Xem tất cả',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'DM Sans',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 260,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: suggestions.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final p = suggestions[index];
+              return SizedBox(
+                width: 155,
+                child: ProductCard(product: p),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
   }
 
   Widget _buildCartItemImage(Map<String, dynamic> item) {
