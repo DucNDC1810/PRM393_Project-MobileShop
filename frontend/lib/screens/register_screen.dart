@@ -679,6 +679,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         controller: controller,
         keyboardType: keyboardType,
         textInputAction: action,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _deco(hint: hint, prefix: prefixIcon),
@@ -742,6 +743,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         obscureText: obscure,
         textInputAction: action,
         onFieldSubmitted: onSubmitted,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _deco(

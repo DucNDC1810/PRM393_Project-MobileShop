@@ -573,6 +573,7 @@ class _LoginScreenState extends State<LoginScreen>
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
         textInputAction: TextInputAction.next,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
@@ -593,6 +594,7 @@ class _LoginScreenState extends State<LoginScreen>
         obscureText: _obscurePassword,
         textInputAction: TextInputAction.done,
         onFieldSubmitted: (_) => _handleLogin(),
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
