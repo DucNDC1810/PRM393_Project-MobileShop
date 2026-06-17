@@ -92,8 +92,13 @@ class _RegisterScreenState extends State<RegisterScreen>
       setState(() => _submitState = _SubmitState.success);
       await Future.delayed(const Duration(milliseconds: 1200));
       if (!mounted) return;
+      final registeredEmail = _emailCtrl.text;
+      await authProvider.logout();
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainShell(isLoggedIn: true)),
+        MaterialPageRoute(
+          builder: (_) => LoginScreen(registeredEmail: registeredEmail),
+        ),
       );
     } else {
       setState(() => _submitState = _SubmitState.idle);

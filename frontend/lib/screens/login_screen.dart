@@ -9,9 +9,10 @@ import 'main_shell.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.onLoginSuccess});
+  const LoginScreen({super.key, this.onLoginSuccess, this.registeredEmail});
 
   final VoidCallback? onLoginSuccess;
+  final String? registeredEmail;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -39,6 +40,9 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    if (widget.registeredEmail != null) {
+      _emailController.text = widget.registeredEmail!;
+    }
 
     _floatController = AnimationController(
       vsync: this,
