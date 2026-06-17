@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
@@ -17,6 +18,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _emailKey = GlobalKey<FormFieldState<String>>();
 
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -28,6 +30,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscureConfirm = true;
   bool _agreed = false;
   _SubmitState _submitState = _SubmitState.idle;
+
+  // Email validation state
+  bool? _emailExists; // null = not checked, true = exists, false = doesn't exist
+  bool _emailCheckLoading = false;
+  Timer? _emailCheckTimer;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -55,11 +62,16 @@ class _RegisterScreenState extends State<RegisterScreen>
     _phoneCtrl.dispose();
     _passCtrl.dispose();
     _confirmCtrl.dispose();
+    _emailCheckTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_emailExists == true) {
+      _showSnack('Email này đã được đăng ký.');
+      return;
+    }
     if (!_agreed) {
       _showSnack('Vui lòng đồng ý với Điều khoản & Chính sách bảo mật.');
       return;
@@ -87,6 +99,59 @@ class _RegisterScreenState extends State<RegisterScreen>
       setState(() => _submitState = _SubmitState.idle);
       _showSnack(authProvider.errorMessage ?? 'Đăng ký thất bại. Vui lòng thử lại.');
     }
+  }
+
+  void _checkEmailExists(String email) {
+    _emailCheckTimer?.cancel();
+    
+    // Clear regex check
+    final isValidFormat = RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
+    
+    if (email.isEmpty) {
+      setState(() {
+        _emailExists = null;
+        _emailCheckLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _emailKey.currentState?.validate();
+      });
+      return;
+    }
+
+    if (!isValidFormat) {
+      setState(() {
+        _emailExists = null;
+        _emailCheckLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _emailKey.currentState?.validate();
+      });
+      return;
+    }
+
+    // Valid format, show loading and debounce check
+    setState(() {
+      _emailExists = null;
+      _emailCheckLoading = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _emailKey.currentState?.validate();
+    });
+    
+    _emailCheckTimer = Timer(const Duration(milliseconds: 600), () async {
+      if (!mounted) return;
+      final authProvider = context.read<AuthProvider>();
+      final exists = await authProvider.checkEmailExists(email);
+      if (mounted) {
+        setState(() {
+          _emailExists = exists;
+          _emailCheckLoading = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _emailKey.currentState?.validate();
+        });
+      }
+    });
   }
 
   void _showSnack(String msg) {
@@ -251,20 +316,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             // Email
             _fieldLabel('Email'),
             const SizedBox(height: 6),
-            _buildField(
-              controller: _emailCtrl,
-              hint: 'example@beautyglow.com',
-              prefixIcon: Icons.mail_outline_rounded,
-              keyboardType: TextInputType.emailAddress,
-              action: TextInputAction.next,
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Vui lòng nhập email';
-                if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
-                  return 'Email không hợp lệ';
-                }
-                return null;
-              },
-            ),
+            _buildEmailField(),
             const SizedBox(height: 18),
 
             // Phone
@@ -627,6 +679,48 @@ class _RegisterScreenState extends State<RegisterScreen>
         decoration: _deco(hint: hint, prefix: prefixIcon),
         validator: validator,
       );
+
+  Widget _buildEmailField() {
+    // Build suffix indicator
+    Widget? suffixIcon;
+    if (_emailCheckLoading) {
+      suffixIcon = const SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.orange),
+      );
+    } else if (_emailExists != null) {
+      suffixIcon = _emailExists!
+          ? Icon(Icons.close_rounded, color: Colors.red, size: 18)
+          : Icon(Icons.check_rounded, color: Colors.green, size: 18);
+    }
+
+    return TextFormField(
+      key: _emailKey,
+      controller: _emailCtrl,
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.next,
+      onChanged: _checkEmailExists,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      style: const TextStyle(
+          fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
+      decoration: _deco(
+        hint: 'example@beautyglow.com',
+        prefix: Icons.mail_outline_rounded,
+        suffix: suffixIcon,
+      ),
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'Vui lòng nhập email';
+        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
+          return 'Email không hợp lệ';
+        }
+        if (_emailExists == true) {
+          return 'Email này đã được đăng ký';
+        }
+        return null;
+      },
+    );
+  }
 
   Widget _buildPasswordField({
     required TextEditingController controller,

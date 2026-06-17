@@ -152,6 +152,29 @@ class AuthService {
     await user.reload();
   }
 
+  Future<bool> emailExists(String email) async {
+    try {
+      final methods = await _auth.fetchSignInMethodsForEmail(email.trim());
+      print('Firebase Auth methods for ${email.trim()}: $methods');
+      if (methods.isNotEmpty) return true;
+    } catch (e) {
+      print('Firebase Auth fetch error: $e');
+    }
+
+    try {
+      final query = await _db
+          .collection('users')
+          .where('email', isEqualTo: email.trim())
+          .limit(1)
+          .get();
+      print('Firestore query count for ${email.trim()}: ${query.docs.length}');
+      return query.docs.isNotEmpty;
+    } catch (e) {
+      print('Firestore email check error: $e');
+      return false;
+    }
+  }
+
   /// Re-authenticate then change password
   Future<void> changePassword({
     required String currentPassword,
