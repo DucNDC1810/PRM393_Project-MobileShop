@@ -51,11 +51,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDfdkcpc3sCjCvyHLH264gnRXonBRe6pEA',
-    appId: '1:202728848907:android:ea7f7fbad6990c2cc0910e',
-    messagingSenderId: '202728848907',
-    projectId: 'beauty-and-glow',
-    storageBucket: 'beauty-and-glow.firebasestorage.app',
+    apiKey: 'AIzaSyAvCdKMGrS-hGv3jLvg2mbLrF-KXxBMJKM',
+    appId: '1:551557072407:android:8dab3e884951d9d7affe52',
+    messagingSenderId: '551557072407',
+    projectId: 'prm393-mobileshop',
+    storageBucket: 'prm393-mobileshop.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
