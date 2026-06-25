@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/product_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
+import '../widgets/product_card.dart';
+import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
-  const CartScreen({super.key});
+  final VoidCallback? onShopNowPressed;
+  const CartScreen({super.key, this.onShopNowPressed});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
@@ -16,6 +20,17 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   String _couponCode = '';
   bool _couponApplied = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final productProvider = context.read<ProductProvider>();
+      if (productProvider.products.isEmpty) {
+        productProvider.loadProducts();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,9 +67,17 @@ class _CartScreenState extends State<CartScreen> {
             ),
         ],
       ),
-      body: cartItems.isEmpty 
-          ? _buildEmptyCart() 
-          : _buildCartContent(cart, cartItems, subtotal, discount, shipping, total),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            if (cartItems.isEmpty)
+              _buildEmptyCart()
+            else
+              _buildCartContent(cart, cartItems, subtotal, discount, shipping, total),
+            _buildSuggestionsSection(),
+          ],
+        ),
+      ),
       bottomNavigationBar: cartItems.isEmpty 
           ? null 
           : _buildCheckoutBar(cart, cartItems, subtotal, discount, shipping, total),
@@ -62,35 +85,35 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildEmptyCart() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text('🛒', style: TextStyle(fontSize: 80)),
           const SizedBox(height: 16),
           const Text(
-            'Giỏ hàng trống',
+            'Giỏ hàng của bạn đang trống',
             style: TextStyle(
               fontFamily: 'DM Sans',
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
               color: AppColors.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Hãy thêm sản phẩm yêu thích vào giỏ hàng',
+            'Khám phá và thêm sản phẩm yêu thích nhé! Hàng ngàn ưu đãi làm đẹp đang chờ đón bạn.',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: AppColors.onSurfaceVariant,
               fontFamily: 'DM Sans',
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {
-              // Switch to products tab
-            },
+            onPressed: widget.onShopNowPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -99,9 +122,16 @@ class _CartScreenState extends State<CartScreen> {
                   borderRadius: BorderRadius.circular(24)),
               elevation: 0,
             ),
-            child: const Text(
-              'Mua sắm ngay',
-              style: TextStyle(fontWeight: FontWeight.w700, fontFamily: 'DM Sans'),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.shopping_bag_outlined, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Mua sắm ngay',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontFamily: 'DM Sans'),
+                ),
+              ],
             ),
           ),
         ],
@@ -117,7 +147,7 @@ class _CartScreenState extends State<CartScreen> {
     int shipping, 
     int total,
   ) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,10 +210,7 @@ class _CartScreenState extends State<CartScreen> {
               color: AppColors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Center(
-              child: Text(item['emoji'] as String,
-                  style: const TextStyle(fontSize: 36)),
-            ),
+            child: _buildCartItemImage(item),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -488,7 +515,7 @@ class _CartScreenState extends State<CartScreen> {
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               final auth = context.read<AuthProvider>();
               if (!auth.isLoggedIn) {
                 CustomToast.showError(
@@ -498,73 +525,11 @@ class _CartScreenState extends State<CartScreen> {
                 return;
               }
 
-              // Show loading dialog
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CheckoutScreen(discount: discount),
+                ),
               );
-
-              try {
-                final user = auth.user;
-                final itemsData = cartItems.map((item) => {
-                  'id': item['id'],
-                  'name': item['name'],
-                  'brand': item['brand'],
-                  'price': item['price'],
-                  'quantity': item['quantity'],
-                  'emoji': item['emoji'],
-                }).toList();
-
-                await FirebaseFirestore.instance.collection('orders').add({
-                  'user_email': user?.email,
-                  'user_uid': user?.uid,
-                  'items': itemsData,
-                  'subtotal': subtotal,
-                  'discount': discount,
-                  'shipping': shipping,
-                  'total': total,
-                  'status': 'Chờ xử lý',
-                  'created_at': FieldValue.serverTimestamp(),
-                });
-
-                // Dismiss loading
-                if (mounted) Navigator.of(context).pop();
-
-                // Clear cart
-                cart.clear();
-
-                // Show success dialog
-                if (mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: const Text('🎉 Đặt hàng thành công!', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
-                      content: const Text(
-                        'Đơn hàng của bạn đã được tiếp nhận và đang được xử lý. Cảm ơn bạn đã mua sắm tại Beauty & Glow!',
-                        style: TextStyle(fontFamily: 'DM Sans'),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text('Đóng', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontFamily: 'DM Sans')),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              } catch (e) {
-                // Dismiss loading
-                if (mounted) Navigator.of(context).pop();
-                
-                if (mounted) {
-                  CustomToast.showError(
-                    context,
-                    'Đã có lỗi xảy ra: $e',
-                  );
-                }
-              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -598,5 +563,121 @@ class _CartScreenState extends State<CartScreen> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (m) => '${m[1]}.',
         );
+  }
+
+  Widget _buildSuggestionsSection() {
+    final productProvider = context.watch<ProductProvider>();
+    final products = productProvider.products;
+
+    if (products.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Take up to 6 products as suggestions
+    final suggestions = products.take(6).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Gợi ý cho bạn',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.onSurface,
+                ),
+              ),
+              TextButton(
+                onPressed: widget.onShopNowPressed,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Xem tất cả',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'DM Sans',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 260,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: suggestions.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final p = suggestions[index];
+              return SizedBox(
+                width: 155,
+                child: ProductCard(product: p),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildCartItemImage(Map<String, dynamic> item) {
+    final images = item['images'];
+    String? imageUrl;
+    if (images is List && images.isNotEmpty) {
+      imageUrl = images.first?.toString();
+    } else if (item['image_url'] != null) {
+      imageUrl = item['image_url'].toString();
+    }
+    final emoji = item['emoji'] as String? ?? '✨';
+
+    if (imageUrl != null && imageUrl.startsWith('http')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          imageUrl,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Text(
+                emoji,
+                style: const TextStyle(fontSize: 32),
+              ),
+            );
+          },
+        ),
+      );
+    }
+    return Center(
+      child: Text(
+        emoji,
+        style: const TextStyle(fontSize: 32),
+      ),
+    );
   }
 }

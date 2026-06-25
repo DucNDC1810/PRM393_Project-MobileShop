@@ -40,7 +40,10 @@ class _MainShellState extends State<MainShell> {
   List<Widget> _screens(bool isLoggedIn) => [
     const HomeScreen(),
     const ProductsScreen(),
-    const CartScreen(),
+    CartScreen(onShopNowPressed: () {
+      print('Shop Now pressed - changing index to 1');
+      setState(() => _currentIndex = 1);
+    }),
     ProfileScreen(isLoggedIn: isLoggedIn),
   ];
 

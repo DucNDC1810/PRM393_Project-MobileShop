@@ -145,8 +145,8 @@ class _PromoBannerState extends State<PromoBanner> {
               ),
             ),
           ),
-          // Dot indicators
         ),
+        const SizedBox(height: 4), // Spacing below indicator dots to avoid overlapping category chips
       ],
     );
   }

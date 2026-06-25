@@ -9,9 +9,10 @@ import 'main_shell.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.onLoginSuccess});
+  const LoginScreen({super.key, this.onLoginSuccess, this.registeredEmail});
 
   final VoidCallback? onLoginSuccess;
+  final String? registeredEmail;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -39,6 +40,9 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    if (widget.registeredEmail != null) {
+      _emailController.text = widget.registeredEmail!;
+    }
 
     _floatController = AnimationController(
       vsync: this,
@@ -569,6 +573,7 @@ class _LoginScreenState extends State<LoginScreen>
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
         textInputAction: TextInputAction.next,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
@@ -589,10 +594,11 @@ class _LoginScreenState extends State<LoginScreen>
         obscureText: _obscurePassword,
         textInputAction: TextInputAction.done,
         onFieldSubmitted: (_) => _handleLogin(),
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
-          hint: '••••••••',
+          hint: 'Nhập mật khẩu',
           prefix: Icons.lock_outline_rounded,
           suffix: GestureDetector(
             onTap: () => setState(() => _obscurePassword = !_obscurePassword),

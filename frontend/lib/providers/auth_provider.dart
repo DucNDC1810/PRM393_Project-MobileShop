@@ -176,6 +176,15 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Check if email already exists (for real-time validation)
+  Future<bool> checkEmailExists(String email) async {
+    try {
+      return await _service.emailExists(email);
+    } catch (e) {
+      return false;
+    }
+  }
+
   String _mapFirebaseError(String code) {
     switch (code) {
       case 'user-not-found':

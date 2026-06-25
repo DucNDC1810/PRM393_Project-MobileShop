@@ -67,69 +67,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: _buildSearchBar(),
               ),
             ),
             SliverToBoxAdapter(
-              child: _buildCategories(provider),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _filterChip(
-                              provider.selectedBrand ?? 'Thương hiệu',
-                              Icons.arrow_drop_down,
-                              provider.selectedBrand != null,
-                              () => _showBrandFilterSheet(context, provider),
-                            ),
-                            const SizedBox(width: 8),
-                            _filterChip(
-                              _getPriceRangeLabel(provider.selectedPriceRange),
-                              Icons.arrow_drop_down,
-                              provider.selectedPriceRange != null,
-                              () => _showPriceRangeFilterSheet(context, provider),
-                            ),
-                            const SizedBox(width: 8),
-                            _filterChip(
-                              _getSortLabel(provider.sortBy),
-                              Icons.filter_list,
-                              provider.sortBy != null,
-                              () => _showSortFilterSheet(context, provider),
-                            ),
-                            if (provider.selectedBrand != null ||
-                                provider.selectedPriceRange != null ||
-                                provider.sortBy != null) ...[
-                              const SizedBox(width: 8),
-                              _filterChip(
-                                'Xóa bộ lọc',
-                                Icons.close,
-                                false,
-                                () => provider.resetFilters(),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.grid_view_rounded,
-                          color: AppColors.onSurfaceVariant),
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ],
-                ),
-              ),
+              child: _buildUnifiedFilterRow(provider),
             ),
             if (provider.isLoading)
               const SliverFillRemaining(
@@ -162,7 +105,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -245,50 +188,100 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  Widget _buildCategories(ProductProvider provider) {
+  Widget _buildUnifiedFilterRow(ProductProvider provider) {
     final categories = <Map<String, dynamic>>[
       {'id': null, 'name': 'Tất cả', 'slug': null},
       ...provider.categories,
     ];
 
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          final slug = category['slug'] as String?;
-          final selected = provider.selectedCategory == slug;
-          return GestureDetector(
-            onTap: () => provider.filterByCategory(slug),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.15),
-                  width: selected ? 1.5 : 1.0,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  category['name']?.toString() ?? '',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? Colors.white : AppColors.primary,
-                    fontFamily: 'DM Sans',
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ...categories.map((category) {
+                    final slug = category['slug'] as String?;
+                    final selected = provider.selectedCategory == slug;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: () => provider.filterByCategory(slug),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: selected ? AppColors.primary : AppColors.primary.withOpacity(0.15),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                category['name']?.toString() ?? '',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                  color: selected ? Colors.white : AppColors.primary,
+                                  fontFamily: 'DM Sans',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                  _filterChip(
+                    provider.selectedBrand ?? 'Thương hiệu',
+                    Icons.arrow_drop_down,
+                    provider.selectedBrand != null,
+                    () => _showBrandFilterSheet(context, provider),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  _filterChip(
+                    _getPriceRangeLabel(provider.selectedPriceRange),
+                    Icons.arrow_drop_down,
+                    provider.selectedPriceRange != null,
+                    () => _showPriceRangeFilterSheet(context, provider),
+                  ),
+                  const SizedBox(width: 8),
+                  _filterChip(
+                    _getSortLabel(provider.sortBy),
+                    Icons.filter_list,
+                    provider.sortBy != null,
+                    () => _showSortFilterSheet(context, provider),
+                  ),
+                  if (provider.selectedBrand != null ||
+                      provider.selectedPriceRange != null ||
+                      provider.sortBy != null) ...[
+                    const SizedBox(width: 8),
+                    _filterChip(
+                      'Xóa bộ lọc',
+                      Icons.close,
+                      false,
+                      () => provider.resetFilters(),
+                    ),
+                  ],
+                ],
               ),
             ),
-          );
-        },
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.grid_view_rounded,
+                color: AppColors.onSurfaceVariant),
+            constraints: const BoxConstraints(),
+            padding: EdgeInsets.zero,
+          ),
+        ],
       ),
     );
   }
