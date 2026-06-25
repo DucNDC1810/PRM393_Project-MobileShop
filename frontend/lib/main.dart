@@ -9,6 +9,7 @@ import 'providers/cart_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/splash_screen.dart';
+import 'services/product_service.dart';
 import 'theme/app_theme.dart';
 
 import 'package:google_sign_in/google_sign_in.dart';
@@ -17,10 +18,24 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
-  );
+  ).catchError((_) => Firebase.app());
   await GoogleSignIn.instance.initialize();
 
+  await _seedIfNeeded();
+
   runApp(const MyApp());
+}
+
+Future<void> _seedIfNeeded() async {
+  try {
+    final service = ProductService();
+    final products = await service.getProducts();
+    if (products.length < 29) {
+      await service.deleteAllProducts();
+      await service.seedMockData();
+      await service.seedAdditionalProducts();
+    }
+  } catch (_) {}
 }
 
 class MyApp extends StatelessWidget {

@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/shop_logo.dart';
+import 'email_verification_screen.dart';
 import 'login_screen.dart';
 import 'main_shell.dart';
 
@@ -93,11 +94,9 @@ class _RegisterScreenState extends State<RegisterScreen>
       await Future.delayed(const Duration(milliseconds: 1200));
       if (!mounted) return;
       final registeredEmail = _emailCtrl.text;
-      await authProvider.logout();
-      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => LoginScreen(registeredEmail: registeredEmail),
+          builder: (_) => EmailVerificationScreen(email: registeredEmail),
         ),
       );
     } else {

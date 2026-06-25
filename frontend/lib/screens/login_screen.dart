@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/shop_logo.dart';
+import 'email_verification_screen.dart';
 import 'main_shell.dart';
 import 'register_screen.dart';
 
@@ -86,6 +87,19 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = false);
 
     if (success) {
+      final verified = await authProvider.reloadUser();
+      if (!mounted) return;
+      if (!verified) {
+        final email = _emailController.text.trim();
+        await authProvider.logout();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationScreen(email: email),
+          ),
+        );
+        return;
+      }
       if (widget.onLoginSuccess != null) {
         widget.onLoginSuccess!();
         Navigator.of(context).pop();

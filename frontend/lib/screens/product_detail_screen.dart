@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
+import 'checkout_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -376,12 +377,43 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Expanded(
                 child: SizedBox(
                   height: 48,
-                  child: ElevatedButton(
+                  child: OutlinedButton(
                     onPressed: () {
                       context.read<CartProvider>().addItem(p, quantity: _quantity);
                       CustomToast.showSuccess(
                         context,
                         'Đã thêm $_quantity x $name vào giỏ hàng.',
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    child: const Text(
+                      'Thêm vào giỏ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'DM Sans',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Buy now button
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.read<CartProvider>().addItem(p, quantity: _quantity);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CheckoutScreen()),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -393,9 +425,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       elevation: 0,
                     ),
                     child: const Text(
-                      'Thêm vào giỏ hàng',
+                      'Mua ngay',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         fontFamily: 'DM Sans',
                       ),

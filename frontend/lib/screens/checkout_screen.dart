@@ -5,7 +5,6 @@ import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
-import 'main_shell.dart';
 import 'order_success_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -37,16 +36,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill user information if logged in
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = context.read<AuthProvider>();
-      if (auth.isLoggedIn && auth.user != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prefillUserInfo());
+  }
+
+  Future<void> _prefillUserInfo() async {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn || auth.user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(auth.user!.uid)
+          .get();
+      final data = doc.data();
+      if (mounted) {
         setState(() {
-          _nameCtrl.text = auth.user!.displayName ?? '';
-          // If we have phone, we can populate it, or leave empty
+          _nameCtrl.text = data?['name'] ?? auth.user!.displayName ?? '';
+          _phoneCtrl.text = data?['phone'] ?? '';
         });
       }
-    });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _nameCtrl.text = auth.user!.displayName ?? '';
+        });
+      }
+    }
   }
 
   @override

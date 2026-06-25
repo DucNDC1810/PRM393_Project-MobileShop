@@ -9,6 +9,15 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+  bool get isEmailVerified => _auth.currentUser?.emailVerified ?? false;
+
+  Future<void> sendVerificationEmail() async {
+    await _auth.currentUser?.sendEmailVerification();
+  }
+
+  Future<void> reloadUser() async {
+    await _auth.currentUser?.reload();
+  }
 
   Future<UserCredential> login(String email, String password) async {
     return await _auth.signInWithEmailAndPassword(
@@ -36,6 +45,8 @@ class AuthService {
       'phone': phone ?? '',
       'created_at': FieldValue.serverTimestamp(),
     });
+
+    await credential.user?.sendEmailVerification();
 
     return credential;
   }
