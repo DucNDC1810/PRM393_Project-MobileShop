@@ -98,6 +98,7 @@ class ProductProvider extends ChangeNotifier {
         await _service.seedMockData();
         _products = await _service.getProducts(category: category);
       }
+
       
       _status = LoadStatus.success;
     } catch (e) {

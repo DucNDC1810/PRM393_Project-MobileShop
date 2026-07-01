@@ -166,24 +166,43 @@ class MyOrdersScreen extends StatelessWidget {
                               final item = items[idx] as Map<String, dynamic>;
                               final String emoji = item['emoji'] ?? '📱';
                               final String name = item['name'] ?? 'Sản phẩm';
+                              final String brand = item['brand'] as String? ?? '';
                               final int qty = (item['quantity'] ?? 1) as int;
                               final int price = (item['price'] ?? 0) as int;
+
+                              final images = item['images'];
+                              String? imageUrl;
+                              if (images is List && images.isNotEmpty) {
+                                imageUrl = images.first?.toString();
+                              } else if (item['image_url'] != null) {
+                                imageUrl = item['image_url'].toString();
+                              }
+                              final bool hasImage = imageUrl != null && imageUrl.startsWith('http');
 
                               return Row(
                                 children: [
                                   Container(
-                                    width: 44,
-                                    height: 44,
+                                    width: 56,
+                                    height: 56,
                                     decoration: BoxDecoration(
                                       color: AppColors.surfaceContainerLow,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: AppColors.outlineVariant),
                                     ),
-                                    child: Center(
-                                      child: Text(
-                                        emoji,
-                                        style: const TextStyle(fontSize: 24),
-                                      ),
-                                    ),
+                                    child: hasImage
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(9),
+                                            child: Image.network(
+                                              imageUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, e) => Center(
+                                                child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                                              ),
+                                            ),
+                                          )
+                                        : Center(
+                                            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                                          ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -202,8 +221,17 @@ class MyOrdersScreen extends StatelessWidget {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 2),
+                                        if (brand.isNotEmpty)
+                                          Text(
+                                            brand,
+                                            style: const TextStyle(
+                                              fontFamily: 'DM Sans',
+                                              fontSize: 11,
+                                              color: AppColors.onSurfaceVariant,
+                                            ),
+                                          ),
                                         Text(
-                                          'Số lượng: $qty  •  Đơn giá: ${_formatPrice(price)}đ',
+                                          'x$qty  •  ${_formatPrice(price)}đ',
                                           style: const TextStyle(
                                             fontFamily: 'DM Sans',
                                             fontSize: 11,

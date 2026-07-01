@@ -15,8 +15,9 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus get status => _status;
   User? get user => _user;
   String? get errorMessage => _errorMessage;
-  bool get isLoggedIn => _user != null;
+  bool get isLoggedIn => _user != null && (_user!.emailVerified || _user!.providerData.any((p) => p.providerId != 'password'));
   bool get isLoading => _status == AuthStatus.loading;
+  bool get isEmailVerified => _service.isEmailVerified;
 
   AuthProvider() {
     _service.authStateChanges.listen((user) {
@@ -174,6 +175,37 @@ class AuthProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  Future<bool> sendVerificationEmail() async {
+    try {
+      await _service.sendVerificationEmail();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Không gửi được email xác thực. Vui lòng thử lại.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> reloadUser() async {
+    try {
+      await _service.reloadUser();
+      _user = _service.currentUser;
+      notifyListeners();
+      return _user?.emailVerified ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if email already exists (for real-time validation)
+  Future<bool> checkEmailExists(String email) async {
+    try {
+      return await _service.emailExists(email);
+    } catch (e) {
+      return false;
+    }
   }
 
   String _mapFirebaseError(String code) {

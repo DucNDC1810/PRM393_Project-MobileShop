@@ -5,13 +5,15 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
 import '../widgets/shop_logo.dart';
+import 'email_verification_screen.dart';
 import 'main_shell.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.onLoginSuccess});
+  const LoginScreen({super.key, this.onLoginSuccess, this.registeredEmail});
 
   final VoidCallback? onLoginSuccess;
+  final String? registeredEmail;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -39,6 +41,9 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    if (widget.registeredEmail != null) {
+      _emailController.text = widget.registeredEmail!;
+    }
 
     _floatController = AnimationController(
       vsync: this,
@@ -82,6 +87,19 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = false);
 
     if (success) {
+      final verified = await authProvider.reloadUser();
+      if (!mounted) return;
+      if (!verified) {
+        final email = _emailController.text.trim();
+        await authProvider.logout();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationScreen(email: email),
+          ),
+        );
+        return;
+      }
       if (widget.onLoginSuccess != null) {
         widget.onLoginSuccess!();
         Navigator.of(context).pop();
@@ -569,6 +587,7 @@ class _LoginScreenState extends State<LoginScreen>
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
         textInputAction: TextInputAction.next,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
@@ -589,10 +608,11 @@ class _LoginScreenState extends State<LoginScreen>
         obscureText: _obscurePassword,
         textInputAction: TextInputAction.done,
         onFieldSubmitted: (_) => _handleLogin(),
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
-          hint: '••••••••',
+          hint: 'Nhập mật khẩu',
           prefix: Icons.lock_outline_rounded,
           suffix: GestureDetector(
             onTap: () => setState(() => _obscurePassword = !_obscurePassword),

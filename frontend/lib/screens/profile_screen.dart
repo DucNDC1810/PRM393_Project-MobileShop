@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,10 +13,46 @@ import 'chat_screen.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.isLoggedIn = false});
-
   final bool isLoggedIn;
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  int _orderCount = 0;
+  int _loyaltyPoints = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = context.read<AuthProvider>().user;
+    if (user != null) _fetchStats(user.uid);
+  }
+
+  Future<void> _fetchStats(String uid) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('user_uid', isEqualTo: uid)
+          .get();
+
+      int points = 0;
+      for (final doc in snap.docs) {
+        final total = (doc.data()['total'] ?? 0) as num;
+        points += (total / 1000).floor();
+      }
+
+      if (mounted) {
+        setState(() {
+          _orderCount = snap.docs.length;
+          _loyaltyPoints = points;
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -262,11 +299,11 @@ class ProfileScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _statItem('12', 'Đơn hàng'),
+              _statItem('$_orderCount', 'Đơn hàng'),
               Container(width: 1, height: 32, color: Colors.white30),
-              _statItem('5', 'Đánh giá'),
+              _statItem('0', 'Đánh giá'),
               Container(width: 1, height: 32, color: Colors.white30),
-              _statItem('3', 'Yêu thích'),
+              _statItem('0', 'Yêu thích'),
             ],
           ),
         ],
@@ -295,12 +332,42 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildLoyaltyCard() {
+    // VIP levels: Bronze < 500, Silver < 2000, Gold < 5000, Platinum >= 5000
+    String vipLabel;
+    String nextLabel;
+    int nextTarget;
+    if (_loyaltyPoints < 500) {
+      vipLabel = '🥉 Bronze';
+      nextLabel = 'Silver';
+      nextTarget = 500;
+    } else if (_loyaltyPoints < 2000) {
+      vipLabel = '💎 Silver';
+      nextLabel = 'Gold';
+      nextTarget = 2000;
+    } else if (_loyaltyPoints < 5000) {
+      vipLabel = '🥇 Gold';
+      nextLabel = 'Platinum';
+      nextTarget = 5000;
+    } else {
+      vipLabel = '💠 Platinum';
+      nextLabel = '';
+      nextTarget = 5000;
+    }
+
+    final prevTarget = _loyaltyPoints < 500 ? 0 : _loyaltyPoints < 2000 ? 500 : _loyaltyPoints < 5000 ? 2000 : 5000;
+    final progress = nextTarget > prevTarget
+        ? ((_loyaltyPoints - prevTarget) / (nextTarget - prevTarget)).clamp(0.0, 1.0)
+        : 1.0;
+    final percent = (progress * 100).round();
+    final pointsFormatted = _loyaltyPoints.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF475569), Color(0xFF1E293B)], // Changed to tech slate gradient
+          colors: [Color(0xFF475569), Color(0xFF1E293B)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -309,10 +376,10 @@ class ProfileScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Thẻ thành viên',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
@@ -321,43 +388,44 @@ class ProfileScreen extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              Text('💎 VIP Silver', style: TextStyle(color: Colors.white70, fontSize: 13, fontFamily: 'DM Sans')),
+              Text(vipLabel, style: const TextStyle(color: Colors.white70, fontSize: 13, fontFamily: 'DM Sans')),
             ],
           ),
           const SizedBox(height: 14),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '2,450 điểm',
-                style: TextStyle(
+                '$pointsFormatted điểm',
+                style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                   fontFamily: 'DM Sans',
                 ),
               ),
-              Text(
-                'Cần thêm 550đ\nđể lên VIP Gold',
-                textAlign: TextAlign.right,
-                style: TextStyle(fontSize: 11, color: Colors.white60, height: 1.4, fontFamily: 'DM Sans'),
-              ),
+              if (nextLabel.isNotEmpty)
+                Text(
+                  'Cần thêm ${nextTarget - _loyaltyPoints} điểm\nđể lên $nextLabel',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontSize: 11, color: Colors.white60, height: 1.4, fontFamily: 'DM Sans'),
+                ),
             ],
           ),
           const SizedBox(height: 12),
-          const ClipRRect(
-            borderRadius: BorderRadius.all(Radius.circular(4)),
+          ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(4)),
             child: LinearProgressIndicator(
-              value: 0.82,
+              value: progress,
               backgroundColor: Colors.white24,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 6,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            '82% đến VIP Gold',
-            style: TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'DM Sans'),
+          Text(
+            nextLabel.isNotEmpty ? '$percent% đến $nextLabel' : 'Đã đạt hạng cao nhất',
+            style: const TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'DM Sans'),
           ),
         ],
       ),

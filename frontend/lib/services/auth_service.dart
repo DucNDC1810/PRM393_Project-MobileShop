@@ -9,6 +9,15 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+  bool get isEmailVerified => _auth.currentUser?.emailVerified ?? false;
+
+  Future<void> sendVerificationEmail() async {
+    await _auth.currentUser?.sendEmailVerification();
+  }
+
+  Future<void> reloadUser() async {
+    await _auth.currentUser?.reload();
+  }
 
   Future<UserCredential> login(String email, String password) async {
     return await _auth.signInWithEmailAndPassword(
@@ -36,6 +45,8 @@ class AuthService {
       'phone': phone ?? '',
       'created_at': FieldValue.serverTimestamp(),
     });
+
+    await credential.user?.sendEmailVerification();
 
     return credential;
   }
@@ -150,6 +161,29 @@ class AuthService {
 
     // Reload user to get fresh data
     await user.reload();
+  }
+
+  Future<bool> emailExists(String email) async {
+    try {
+      final methods = await _auth.fetchSignInMethodsForEmail(email.trim());
+      print('Firebase Auth methods for ${email.trim()}: $methods');
+      if (methods.isNotEmpty) return true;
+    } catch (e) {
+      print('Firebase Auth fetch error: $e');
+    }
+
+    try {
+      final query = await _db
+          .collection('users')
+          .where('email', isEqualTo: email.trim())
+          .limit(1)
+          .get();
+      print('Firestore query count for ${email.trim()}: ${query.docs.length}');
+      return query.docs.isNotEmpty;
+    } catch (e) {
+      print('Firestore email check error: $e');
+      return false;
+    }
   }
 
   /// Re-authenticate then change password
