@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../services/payos_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
 import 'order_success_screen.dart';
+import 'payment_waiting_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final int discount;
@@ -39,6 +42,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _prefillUserInfo());
   }
 
+  List<Map<String, dynamic>> _savedAddresses = [];
+
   Future<void> _prefillUserInfo() async {
     final auth = context.read<AuthProvider>();
     if (!auth.isLoggedIn || auth.user == null) return;
@@ -51,8 +56,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final data = doc.data();
       if (mounted) {
         setState(() {
-          _nameCtrl.text = data?['name'] ?? auth.user!.displayName ?? '';
-          _phoneCtrl.text = data?['phone'] ?? '';
+          if (data != null && data['saved_addresses'] != null) {
+            _savedAddresses = List<Map<String, dynamic>>.from(data['saved_addresses']);
+          }
+          
+          if (_savedAddresses.isNotEmpty) {
+            final latest = _savedAddresses.first;
+            _nameCtrl.text = latest['name'] ?? '';
+            _phoneCtrl.text = latest['phone'] ?? '';
+            _selectedDistrict = latest['district'] ?? 'Quận 1';
+            _cityCtrl.text = latest['city'] ?? 'TP. Hồ Chí Minh';
+            _notesCtrl.text = latest['notes'] ?? '';
+          } else {
+            _nameCtrl.text = data?['name'] ?? auth.user!.displayName ?? '';
+            _phoneCtrl.text = data?['phone'] ?? '';
+          }
         });
       }
     } catch (_) {
@@ -60,6 +78,197 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         setState(() {
           _nameCtrl.text = auth.user!.displayName ?? '';
         });
+      }
+    }
+  }
+
+  void _showAddressBook() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                  const SizedBox(height: 16),
+                  const Text('Sổ địa chỉ đã lưu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, fontFamily: 'DM Sans', color: AppColors.onSurface)),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: _savedAddresses.isEmpty 
+                    ? const Center(child: Text('Chưa có địa chỉ nào được lưu.', style: TextStyle(fontFamily: 'DM Sans', color: AppColors.onSurfaceVariant)))
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _savedAddresses.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final addr = _savedAddresses[index];
+                          return Dismissible(
+                            key: UniqueKey(),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(12)),
+                              child: const Icon(Icons.delete_outline, color: Colors.white),
+                            ),
+                            onDismissed: (direction) async {
+                              _savedAddresses.removeAt(index);
+                              setSheetState((){});
+                              setState((){});
+                              
+                              final auth = context.read<AuthProvider>();
+                              if (auth.user != null) {
+                                await FirebaseFirestore.instance.collection('users').doc(auth.user!.uid).update({
+                                  'saved_addresses': _savedAddresses
+                                });
+                              }
+                            },
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _nameCtrl.text = addr['name'] ?? '';
+                                  _phoneCtrl.text = addr['phone'] ?? '';
+                                  _selectedDistrict = addr['district'] ?? 'Quận 1';
+                                  _cityCtrl.text = addr['city'] ?? 'TP. Hồ Chí Minh';
+                                  _notesCtrl.text = addr['notes'] ?? '';
+                                });
+                                Navigator.pop(context);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppColors.outlineVariant),
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: AppColors.surfaceContainerLowest,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.person_outline, size: 18, color: AppColors.primary),
+                                        const SizedBox(width: 8),
+                                        Text(addr['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, fontFamily: 'DM Sans', color: AppColors.onSurface)),
+                                        const Spacer(),
+                                        const Icon(Icons.phone_outlined, size: 16, color: AppColors.onSurfaceVariant),
+                                        const SizedBox(width: 4),
+                                        Text(addr['phone'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: 'DM Sans', color: AppColors.onSurfaceVariant)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.location_on_outlined, size: 18, color: AppColors.onSurfaceVariant),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '${addr['notes']}, ${addr['district']}, ${addr['city']}',
+                                            style: const TextStyle(fontFamily: 'DM Sans', color: AppColors.onSurfaceVariant, fontSize: 13, height: 1.4),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        if (_savedAddresses.length >= 6) {
+                          CustomToast.showError(context, 'Sổ địa chỉ đã đầy (tối đa 6). Vui lòng vuốt sang trái để xóa bớt trước!');
+                          return;
+                        }
+                        setState(() {
+                          _nameCtrl.clear();
+                          _phoneCtrl.clear();
+                          _notesCtrl.clear();
+                        });
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.add_rounded, color: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      label: const Text('Nhập địa chỉ mới', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, fontFamily: 'DM Sans', color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
+  Future<void> _saveCurrentAddress() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn || auth.user == null) {
+      CustomToast.showError(context, 'Vui lòng đăng nhập để lưu địa chỉ.');
+      return;
+    }
+
+    final newAddress = {
+      'name': _nameCtrl.text.trim(),
+      'phone': _phoneCtrl.text.trim(),
+      'district': _selectedDistrict,
+      'city': _cityCtrl.text.trim(),
+      'notes': _notesCtrl.text.trim(),
+    };
+    
+    bool exists = _savedAddresses.any((addr) => 
+      addr['name'] == newAddress['name'] &&
+      addr['phone'] == newAddress['phone'] &&
+      addr['district'] == newAddress['district'] &&
+      addr['notes'] == newAddress['notes']
+    );
+
+    if (exists) {
+      CustomToast.showError(context, 'Địa chỉ này đã có sẵn trong Sổ địa chỉ.');
+      return;
+    }
+
+    if (_savedAddresses.length >= 6) {
+      CustomToast.showError(context, 'Sổ địa chỉ đã đầy (tối đa 6). Vui lòng vào "Sổ địa chỉ" vuốt xóa bớt trước!');
+      return;
+    }
+
+    setState(() {
+      _savedAddresses.insert(0, newAddress);
+    });
+
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(auth.user!.uid).update({
+        'saved_addresses': _savedAddresses
+      });
+      if (mounted) {
+        CustomToast.showSuccess(context, 'Đã lưu địa chỉ vào sổ thành công!');
+      }
+    } catch (_) {
+      if (mounted) {
+        CustomToast.showError(context, 'Đã có lỗi xảy ra khi lưu.');
       }
     }
   }
@@ -91,6 +300,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
+    // Kiểm tra giới hạn địa chỉ TRƯỚC KHI tạo đơn hàng
+    final newAddress = {
+      'name': _nameCtrl.text.trim(),
+      'phone': _phoneCtrl.text.trim(),
+      'district': _selectedDistrict,
+      'city': _cityCtrl.text.trim(),
+      'notes': _notesCtrl.text.trim(),
+    };
+    
+    bool exists = _savedAddresses.any((addr) => 
+      addr['name'] == newAddress['name'] &&
+      addr['phone'] == newAddress['phone'] &&
+      addr['district'] == newAddress['district'] &&
+      addr['notes'] == newAddress['notes']
+    );
+
+    if (!exists && auth.user != null && _savedAddresses.length >= 6) {
+      CustomToast.showError(context, 'Sổ địa chỉ đã đầy (tối đa 6). Vui lòng chọn "Sổ địa chỉ" để xóa bớt trước khi đặt với địa chỉ mới!');
+      return;
+    }
+
+    // Calculate total amount
+    final cartItems = context.read<CartProvider>().items;
+    final int subtotal = cartItems.fold(0, (sum, item) => sum + (item['price'] as int) * (item['quantity'] as int));
+    final int shippingFee = _shippingMethod == 'standard' ? (subtotal > 500000 || subtotal == 0 ? 0 : 30000) : 60000;
+    final int total = subtotal - widget.discount + shippingFee;
+
     // Show loading dialog
     showDialog(
       context: context,
@@ -102,6 +338,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     try {
       final user = auth.user;
+      
+      // Khúc xử lý thanh toán ví
+      if (_paymentMethod == 'wallet' && user != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final currentBalance = doc.data()?['wallet_balance'] ?? 0;
+        if (currentBalance < total) {
+          if (mounted) Navigator.of(context).pop();
+          CustomToast.showError(context, 'Số dư ví không đủ. Vui lòng nạp thêm tiền!');
+          return;
+        }
+      }
+
       final itemsData = cartItems.map((item) => {
         'id': item['id'],
         'name': item['name'],
@@ -115,7 +363,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       final orderId = _generateOrderId();
 
-      await FirebaseFirestore.instance.collection('orders').add({
+      final docRef = await FirebaseFirestore.instance.collection('orders').add({
         'order_id': orderId,
         'user_email': user?.email,
         'user_uid': user?.uid,
@@ -128,30 +376,93 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         },
         'shipping_method': _shippingMethod == 'standard' ? 'Giao hàng tiêu chuẩn' : 'Giao hàng nhanh',
         'payment_method': _paymentMethod == 'cod' 
-            ? 'Thanh toán khi nhận hàng (COD)' 
-            : (_paymentMethod == 'bank' ? 'Chuyển khoản ngân hàng' : 'Ví điện tử (MoMo/ZaloPay)'),
+            ? 'Thanh toán khi nhận hàng' 
+            : (_paymentMethod == 'payos' ? 'Thanh toán chuyển khoản' : 'Thanh toán bằng số dư ví'),
         'items': itemsData,
         'subtotal': subtotal,
         'discount': widget.discount,
         'shipping_fee': shippingFee,
         'total': total,
-        'status': 'Chờ xử lý',
+        'status': _paymentMethod == 'payos' ? 'Đang thanh toán' : 'Chờ xử lý',
         'created_at': FieldValue.serverTimestamp(),
       });
 
-      // Dismiss loading
-      if (mounted) Navigator.of(context).pop();
+      if (!exists && user != null) {
+        _savedAddresses.insert(0, newAddress);
+        try {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+            'saved_addresses': _savedAddresses
+          });
+        } catch (_) {}
+      }
 
       // Clear cart
       cart.clear();
 
-      // Navigate to OrderSuccessScreen
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => OrderSuccessScreen(orderId: orderId),
-          ),
+      if (_paymentMethod == 'payos') {
+        // Tạo orderCode ngẫu nhiên (dưới 53 bit)
+        final int orderCode = DateTime.now().millisecondsSinceEpoch;
+        
+        final payosData = await PayOSService.createPaymentLink(
+          orderCode: orderCode,
+          amount: total,
+          description: 'Thanh toan don hang',
         );
+
+        final checkoutUrl = payosData['checkoutUrl'];
+        final qrCode = payosData['qrCode'];
+        
+        // Tắt loading
+        if (mounted) Navigator.of(context).pop();
+
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => PaymentWaitingScreen(
+                orderCode: orderCode,
+                firebaseOrderId: orderId,
+                firebaseDocId: docRef.id,
+                checkoutUrl: checkoutUrl,
+                qrCode: qrCode,
+              ),
+            ),
+          );
+        }
+      } else {
+        if (_paymentMethod == 'wallet' && user != null) {
+          // Trừ tiền trong ví
+          await FirebaseFirestore.instance.runTransaction((transaction) async {
+            final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+            final snapshot = await transaction.get(docRef);
+            int currentBalance = 0;
+            if (snapshot.exists && snapshot.data()!.containsKey('wallet_balance')) {
+              currentBalance = snapshot.get('wallet_balance');
+            }
+            transaction.update(docRef, {'wallet_balance': currentBalance - total});
+          });
+
+          // Lưu lịch sử
+          await FirebaseFirestore.instance.collection('wallet_transactions').add({
+            'user_uid': user.uid,
+            'type': 'payment',
+            'amount': total,
+            'status': 'completed',
+            'order_id': orderId,
+            'created_at': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // Tắt loading
+        if (mounted) Navigator.of(context).pop();
+
+        // Chuyển tới OrderSuccessScreen cho COD/Bank/Wallet
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => OrderSuccessScreen(orderId: orderId),
+            ),
+          );
+        }
       }
     } catch (e) {
       // Dismiss loading
@@ -370,15 +681,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ],
               ),
               GestureDetector(
-                onTap: () {},
-                child: const Text(
-                  'Chỉnh sửa',
-                  style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
+                onTap: _showAddressBook,
+                child: Row(
+                  children: const [
+                    Icon(Icons.menu_book_rounded, size: 16, color: AppColors.primary),
+                    SizedBox(width: 4),
+                    Text(
+                      'Sổ địa chỉ',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -466,6 +783,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             maxLines: 2,
             style: const TextStyle(fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
             decoration: _inputDeco(hint: 'Giao hàng vào giờ hành chính...'),
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: _saveCurrentAddress,
+              icon: const Icon(Icons.bookmark_border_rounded, size: 18, color: AppColors.primary),
+              label: const Text(
+                'Lưu thông tin địa chỉ này',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+            ),
           ),
         ],
       ),
@@ -638,22 +978,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           // COD
           _paymentRadioOption(
             value: 'cod',
-            title: '💵 Thanh toán khi nhận hàng (COD)',
+            title: '💵 Thanh toán khi nhận hàng',
             isFree: true,
           ),
           const SizedBox(height: 12),
 
-          // Bank transfer
+          // Wallet (số dư ví)
           _paymentRadioOption(
-            value: 'bank',
-            title: '🏦 Chuyển khoản ngân hàng',
+            value: 'wallet',
+            title: '💳 Thanh toán bằng số dư ví',
           ),
           const SizedBox(height: 12),
 
-          // E-Wallet
+          // PayOS (chuyển khoản)
           _paymentRadioOption(
-            value: 'wallet',
-            title: '💳 Ví điện tử (MoMo/ZaloPay)',
+            value: 'payos',
+            title: '🏦 Thanh toán chuyển khoản',
           ),
         ],
       ),
