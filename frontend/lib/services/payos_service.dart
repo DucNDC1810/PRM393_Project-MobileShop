@@ -1,0 +1,80 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
+import '../config/payos_config.dart';
+
+class PayOSService {
+  static const String _baseUrl = 'https://api-merchant.payos.vn';
+
+  // Tạo link thanh toán
+  static Future<Map<String, dynamic>> createPaymentLink({
+    required int orderCode,
+    required int amount,
+    required String description,
+  }) async {
+    // 1. Tạo chuỗi dữ liệu để tính signature
+    // Các tham số phải được sắp xếp theo alphabet: amount, cancelUrl, description, orderCode, returnUrl
+    final String dataStr = 'amount=$amount&cancelUrl=${PayOSConfig.cancelUrl}&description=$description&orderCode=$orderCode&returnUrl=${PayOSConfig.returnUrl}';
+
+    // 2. Tính chữ ký HMAC_SHA256
+    final hmac = Hmac(sha256, utf8.encode(PayOSConfig.checksumKey));
+    final signature = hmac.convert(utf8.encode(dataStr)).toString();
+
+    // 3. Chuẩn bị payload
+    final body = {
+      "orderCode": orderCode,
+      "amount": amount,
+      "description": description,
+      "returnUrl": PayOSConfig.returnUrl,
+      "cancelUrl": PayOSConfig.cancelUrl,
+      "signature": signature,
+    };
+
+    // 4. Gọi API
+    final url = Uri.parse('$_baseUrl/v2/payment-requests');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-client-id': PayOSConfig.clientId,
+        'x-api-key': PayOSConfig.apiKey,
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      if (json['code'] == '00') {
+        return json['data']; // Chứa checkoutUrl, paymentLinkId, qrCode...
+      } else {
+        throw Exception(json['desc'] ?? 'Lỗi từ PayOS');
+      }
+    } else {
+      throw Exception('Lỗi gọi API PayOS: ${response.statusCode}');
+    }
+  }
+
+  // Kiểm tra trạng thái thanh toán của đơn hàng
+  static Future<String> getPaymentStatus(int orderCode) async {
+    final url = Uri.parse('$_baseUrl/v2/payment-requests/$orderCode');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-client-id': PayOSConfig.clientId,
+        'x-api-key': PayOSConfig.apiKey,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      if (json['code'] == '00') {
+        return json['data']['status']; // PENDING, PAID, CANCELLED
+      } else {
+        throw Exception(json['desc'] ?? 'Lỗi từ PayOS');
+      }
+    } else {
+      throw Exception('Lỗi gọi API kiểm tra trạng thái: ${response.statusCode}');
+    }
+  }
+}

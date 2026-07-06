@@ -12,6 +12,7 @@ import 'notifications_screen.dart';
 import 'chat_screen.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
+import 'wallet_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.isLoggedIn = false});
@@ -78,6 +79,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _MenuItem(Icons.location_on_outlined, 'Hệ thống cửa hàng', () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const StoreLocationScreen()),
+                    );
+                  }),
+                  _MenuItem(Icons.account_balance_wallet_outlined, 'Ví của tôi', () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const WalletScreen()),
                     );
                   }),
                   _MenuItem(Icons.payment_outlined, 'Phương thức thanh toán', () {}),
