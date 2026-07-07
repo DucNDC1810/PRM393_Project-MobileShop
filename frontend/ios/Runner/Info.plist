@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+
+	<!-- Location permissions -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập vị trí để hiển thị vị trí của bạn trên bản đồ và chỉ đường đến cửa hàng.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập vị trí để hiển thị vị trí của bạn trên bản đồ và chỉ đường đến cửa hàng.</string>
 </dict>
 </plist>
