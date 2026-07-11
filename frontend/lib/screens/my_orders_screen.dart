@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
+import 'chat_screen.dart';
 
 class MyOrdersScreen extends StatelessWidget {
   const MyOrdersScreen({super.key});
@@ -280,7 +281,12 @@ class MyOrdersScreen extends StatelessWidget {
                               Expanded(
                                 child: OutlinedButton(
                                   onPressed: () {
-                                    // Action
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const ChatScreen(),
+                                      ),
+                                    );
                                   },
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: AppColors.primary,

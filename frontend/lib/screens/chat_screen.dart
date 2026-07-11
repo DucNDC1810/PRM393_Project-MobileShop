@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -12,13 +14,45 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<Map<String, dynamic>> _messages = [
+  static const String _messagesKey = 'chat_messages_history';
+  
+  List<Map<String, dynamic>> _messages = [
     {
       'sender': 'bot',
       'text': 'Xin chào! Cảm ơn bạn đã liên hệ với bộ phận hỗ trợ khách hàng của Beauty & Glow. Bạn cần chúng tôi tư vấn về dòng mỹ phẩm nào ạ? 💄',
       'time': '20:00',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
+
+  Future<void> _loadMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? messagesJson = prefs.getString(_messagesKey);
+    if (messagesJson != null) {
+      final List<dynamic> decodedList = json.decode(messagesJson);
+      setState(() {
+        _messages.clear();
+        for (var item in decodedList) {
+          _messages.add(Map<String, dynamic>.from(item));
+        }
+      });
+      // Đợi giao diện render xong để scroll
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _scrollToBottom();
+      });
+    }
+  }
+
+  Future<void> _saveMessages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String messagesJson = json.encode(_messages);
+    await prefs.setString(_messagesKey, messagesJson);
+  }
 
   void _sendMessage() {
     final text = _messageController.text.trim();
@@ -32,9 +66,10 @@ class _ChatScreenState extends State<ChatScreen> {
         'time': _getCurrentTime(),
       });
     });
+    _saveMessages();
     _scrollToBottom();
 
-    // Mock bot reply after 1 second
+    // Mock bot reply after 1.2 second
     Timer(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       setState(() {
@@ -44,20 +79,30 @@ class _ChatScreenState extends State<ChatScreen> {
           'time': _getCurrentTime(),
         });
       });
+      _saveMessages();
       _scrollToBottom();
     });
   }
 
   String _generateBotResponse(String userText) {
     final t = userText.toLowerCase();
-    if (t.contains('skincare') || t.contains('dưỡng da') || t.contains('cream')) {
-      return 'Beauty & Glow đang có sẵn các bộ dưỡng da phục hồi Sulwhasoo và Laneige cao cấp với ưu đãi giảm đến 20%. Bạn có muốn đặt hàng ngay không ạ?';
+    if (t.contains('skincare') || t.contains('dưỡng da') || t.contains('cream') || t.contains('mụn')) {
+      return 'Beauty & Glow đang có sẵn các bộ dưỡng da phục hồi và trị mụn cao cấp với ưu đãi giảm đến 20%. Da bạn thuộc loại da nào ạ (dầu, khô, nhạy cảm)?';
+    }
+    if (t.contains('kích ứng') || t.contains('thành phần')) {
+      return 'Dạ các sản phẩm bên shop đều có bảng thành phần lành tính. Nếu bạn có làn da nhạy cảm, shop khuyến khích chọn dòng mỹ phẩm chiết xuất thiên nhiên. Bạn muốn xem chi tiết thành phần sản phẩm nào ạ?';
+    }
+    if (t.contains('đổi trả') || t.contains('bảo quản')) {
+      return 'Shop có chính sách đổi trả miễn phí trong vòng 7 ngày nếu sản phẩm bị lỗi từ nhà sản xuất. Bạn nên bảo quản mỹ phẩm nơi khô ráo, tránh ánh nắng trực tiếp nhé.';
     }
     if (t.contains('son') || t.contains('makeup') || t.contains('trang điểm')) {
       return 'Dòng son thỏi Dior Addict và phấn nước Laneige Neo Cushion đang là best-seller của shop với bảng màu đầy đủ cực kỳ thời thượng đó ạ!';
     }
     if (t.contains('giá') || t.contains('bao nhiêu') || t.contains('km') || t.contains('khuyến mãi')) {
       return 'Dạ hiện tại shop đang chạy chương trình giảm giá lên đến 40% cho các dòng mỹ phẩm chính hãng nhân dịp ra mắt, và miễn phí vận chuyển cho đơn hàng từ 500k ạ!';
+    }
+    if (t.contains('đơn hàng') || t.contains('giao') || t.contains('status')) {
+      return 'Bạn vui lòng cung cấp mã đơn hàng để đội ngũ Beauty & Glow kiểm tra tình trạng giao hàng ngay lập tức nhé.';
     }
     return 'Dạ, yêu cầu của bạn đã được tiếp nhận. Đội ngũ tư vấn viên Beauty & Glow sẽ liên hệ hỗ trợ bạn trực tiếp ngay ạ!';
   }
