@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,7 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus _status = AuthStatus.initial;
   User? _user;
   String? _errorMessage;
+  String _role = 'customer';
 
   AuthStatus get status => _status;
   User? get user => _user;
@@ -18,13 +20,33 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _user != null && (_user!.emailVerified || _user!.providerData.any((p) => p.providerId != 'password'));
   bool get isLoading => _status == AuthStatus.loading;
   bool get isEmailVerified => _service.isEmailVerified;
+  bool get isAdmin => _role == 'admin';
 
   AuthProvider() {
-    _service.authStateChanges.listen((user) {
+    _service.authStateChanges.listen((user) async {
       _user = user;
-      _status = user != null ? AuthStatus.authenticated : AuthStatus.unauthenticated;
+      if (user != null) {
+        await _fetchRole(user.uid);
+        _status = AuthStatus.authenticated;
+      } else {
+        _role = 'customer';
+        _status = AuthStatus.unauthenticated;
+      }
       notifyListeners();
     });
+  }
+
+  Future<void> _fetchRole(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists) {
+        _role = doc.data()?['role'] ?? 'customer';
+      } else {
+        _role = 'customer';
+      }
+    } catch (e) {
+      _role = 'customer';
+    }
   }
 
   Future<bool> login(String email, String password) async {
@@ -33,7 +55,10 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _service.login(email, password);
+      final credential = await _service.login(email, password);
+      if (credential.user != null) {
+        await _fetchRole(credential.user!.uid);
+      }
       return true;
     } on FirebaseAuthException catch (e) {
       _errorMessage = _mapFirebaseError(e.code);
@@ -75,7 +100,10 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _service.signInWithGoogle();
+      final credential = await _service.signInWithGoogle();
+      if (credential.user != null) {
+        await _fetchRole(credential.user!.uid);
+      }
       return true;
     } on FirebaseAuthException catch (e) {
       _errorMessage = _mapFirebaseError(e.code);
@@ -96,7 +124,10 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _service.signInWithFacebook();
+      final credential = await _service.signInWithFacebook();
+      if (credential.user != null) {
+        await _fetchRole(credential.user!.uid);
+      }
       return true;
     } on FirebaseAuthException catch (e) {
       _errorMessage = _mapFirebaseError(e.code);

@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/splash_screen.dart';
@@ -57,6 +58,7 @@ class MyApp extends StatelessWidget {
         routes: {
           '/login': (_) => const LoginScreen(),
           '/home': (_) => const MainShell(),
+          '/admin': (_) => const AdminDashboardScreen(),
         },
       ),
     );

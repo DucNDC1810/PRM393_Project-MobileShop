@@ -155,4 +155,19 @@ class ProductProvider extends ChangeNotifier {
     _sortBy = null;
     notifyListeners();
   }
+
+  Future<void> createProduct(Map<String, dynamic> data) async {
+    await _service.createProduct(data);
+    await loadProducts(category: _selectedCategory);
+  }
+
+  Future<void> updateProduct(String id, Map<String, dynamic> data) async {
+    await _service.updateProduct(id, data);
+    await loadProducts(category: _selectedCategory);
+  }
+
+  Future<void> deleteProduct(String id) async {
+    await _service.deleteProduct(id);
+    await loadProducts(category: _selectedCategory);
+  }
 }
