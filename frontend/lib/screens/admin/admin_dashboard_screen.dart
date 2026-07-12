@@ -39,18 +39,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.adminBackground,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.adminBackground,
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: AppColors.adminPrimary),
+          icon: const Icon(Icons.menu, color: AppColors.primary),
           onPressed: () {},
         ),
         title: const Text(
           'Admin Dashboard',
           style: TextStyle(
-            color: AppColors.adminPrimary,
+            color: AppColors.primary,
             fontWeight: FontWeight.w800,
             fontSize: 20,
           ),
@@ -58,7 +58,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: AppColors.adminPrimary),
+            icon: const Icon(Icons.search, color: AppColors.primary),
             onPressed: () {},
           ),
           Padding(
@@ -74,9 +74,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppColors.adminPrimary,
+          labelColor: AppColors.primary,
           unselectedLabelColor: Colors.grey,
-          indicatorColor: AppColors.adminPrimary,
+          indicatorColor: AppColors.primary,
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'DM Sans'),
           tabs: const [
@@ -179,7 +179,7 @@ class _InventoryTab extends StatelessWidget {
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.adminPrimary,
+                backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(26),
                 ),
@@ -243,7 +243,7 @@ class _InventoryTab extends StatelessWidget {
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 15,
-                                      color: AppColors.adminPrimary,
+                                      color: AppColors.primary,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -271,7 +271,7 @@ class _InventoryTab extends StatelessWidget {
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w700,
-                                            color: isLowStock ? Colors.red.shade700 : AppColors.adminPrimary,
+                                            color: isLowStock ? Colors.red.shade700 : AppColors.primary,
                                           ),
                                         ),
                                       ),
@@ -284,7 +284,7 @@ class _InventoryTab extends StatelessWidget {
                             Column(
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined, color: AppColors.adminPrimary, size: 22),
+                                  icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 22),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
@@ -296,7 +296,7 @@ class _InventoryTab extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: AppColors.adminPrimary, size: 22),
+                                  icon: const Icon(Icons.delete_outline, color: AppColors.primary, size: 22),
                                   onPressed: () => _deleteProduct(context, product['id']),
                                   constraints: const BoxConstraints(),
                                   padding: const EdgeInsets.all(4),
@@ -409,13 +409,13 @@ class _CustomerSupportTabState extends State<_CustomerSupportTab> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.adminPrimary : Colors.grey.shade200,
+                            color: isSelected ? AppColors.primary : Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             filter,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : AppColors.adminPrimary,
+                              color: isSelected ? Colors.white : AppColors.primary,
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
                             ),
@@ -498,7 +498,7 @@ class _CustomerSupportTabState extends State<_CustomerSupportTab> {
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w800,
-                                      color: AppColors.adminPrimary.withOpacity(0.8),
+                                      color: AppColors.primary.withOpacity(0.8),
                                     ),
                                   ),
                                 ),
