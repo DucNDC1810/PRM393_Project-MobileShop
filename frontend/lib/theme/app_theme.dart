@@ -11,6 +11,8 @@ class AppColors {
   static const inversePrimary = Color(0xFFFADAE5);
 
   static const secondary = Color(0xFF665C61); // Muted Plum/Slate
+  static const adminPrimary = Color(0xFF8B5E3C); // Earthy brown for admin
+  static const adminBackground = Color(0xFFFAF5F0); // Very light earthy background
   static const onSecondary = Color(0xFFFFFFFF);
   static const secondaryContainer = Color(0xFFEADCE2);
   static const onSecondaryContainer = Color(0xFF6A6065);
