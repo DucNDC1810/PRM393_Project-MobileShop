@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/favorites_provider.dart';
 import '../screens/product_detail_screen.dart';
 import '../theme/app_theme.dart';
 import 'custom_toast.dart';
@@ -15,11 +16,12 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> {
-  bool _isWishlisted = false;
-
   @override
   Widget build(BuildContext context) {
+    final favoritesProvider = context.watch<FavoritesProvider>();
     final p = widget.product;
+    final productId = p['id']?.toString() ?? '';
+    final bool isWishlisted = favoritesProvider.isFavorite(productId);
 
     // Safely extract price and originalPrice/salePrice from Firestore schema
     final num priceVal = p['price'] ?? 0;
@@ -144,7 +146,17 @@ class _ProductCardState extends State<ProductCard> {
                     top: 6,
                     right: 6,
                     child: GestureDetector(
-                      onTap: () => setState(() => _isWishlisted = !_isWishlisted),
+                      onTap: () {
+                        context.read<FavoritesProvider>().toggleFavorite(p);
+                        final name = p['name'] ?? 'Sản phẩm';
+                        final isNowFav = context.read<FavoritesProvider>().isFavorite(productId);
+                        CustomToast.showSuccess(
+                          context,
+                          isNowFav
+                              ? 'Đã thêm $name vào danh sách yêu thích.'
+                              : 'Đã xóa $name khỏi danh sách yêu thích.',
+                        );
+                      },
                       child: Container(
                         width: 32,
                         height: 32,
@@ -159,9 +171,9 @@ class _ProductCardState extends State<ProductCard> {
                           ],
                         ),
                         child: Icon(
-                          _isWishlisted ? Icons.favorite : Icons.favorite_border,
+                          isWishlisted ? Icons.favorite : Icons.favorite_border,
                           size: 16,
-                          color: _isWishlisted ? AppColors.primary : AppColors.outline,
+                          color: isWishlisted ? AppColors.primary : AppColors.outline,
                         ),
                       ),
                     ),

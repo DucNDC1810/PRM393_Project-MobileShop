@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/favorites_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_toast.dart';
 import 'checkout_screen.dart';
@@ -17,11 +18,13 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _quantity = 1;
-  bool _isWishlisted = false;
 
   @override
   Widget build(BuildContext context) {
+    final favoritesProvider = context.watch<FavoritesProvider>();
     final p = widget.product;
+    final productId = p['id']?.toString() ?? '';
+    final bool isWishlisted = favoritesProvider.isFavorite(productId);
 
     // Safely extract price and originalPrice/salePrice from Firestore schema
     final num priceVal = p['price'] ?? 0;
@@ -75,10 +78,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _isWishlisted ? Icons.favorite : Icons.favorite_border,
-              color: _isWishlisted ? AppColors.primary : AppColors.onSurface,
+              isWishlisted ? Icons.favorite : Icons.favorite_border,
+              color: isWishlisted ? AppColors.primary : AppColors.onSurface,
             ),
-            onPressed: () => setState(() => _isWishlisted = !_isWishlisted),
+            onPressed: () {
+              context.read<FavoritesProvider>().toggleFavorite(p);
+              final name = p['name'] ?? 'Sản phẩm';
+              final isNowFav = context.read<FavoritesProvider>().isFavorite(productId);
+              CustomToast.showSuccess(
+                context,
+                isNowFav
+                    ? 'Đã thêm $name vào danh sách yêu thích.'
+                    : 'Đã xóa $name khỏi danh sách yêu thích.',
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.share_outlined, color: AppColors.onSurface),

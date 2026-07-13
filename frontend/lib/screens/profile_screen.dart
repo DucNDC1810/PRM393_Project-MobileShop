@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/favorites_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shop_logo.dart';
 import 'login_screen.dart';
@@ -17,8 +18,9 @@ import 'my_reviews_screen.dart';
 import 'payment_methods_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key, this.isLoggedIn = false});
+  const ProfileScreen({super.key, this.isLoggedIn = false, this.onFavoritesPressed});
   final bool isLoggedIn;
+  final VoidCallback? onFavoritesPressed;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -157,7 +159,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
                     );
                   }),
-                  _MenuItem(Icons.favorite_border, 'Danh sách yêu thích', () {}),
+                  _MenuItem(Icons.favorite_border, 'Danh sách yêu thích', () {
+                    widget.onFavoritesPressed?.call();
+                  }),
                   _MenuItem(Icons.star_border, 'Đánh giá của tôi', () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const MyReviewsScreen()),
@@ -369,15 +373,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: const TextStyle(fontSize: 13, color: Colors.white70, fontFamily: 'DM Sans'),
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _statItem('$_orderCount', 'Đơn hàng'),
-              Container(width: 1, height: 32, color: Colors.white30),
-              _statItem('0', 'Đánh giá'),
-              Container(width: 1, height: 32, color: Colors.white30),
-              _statItem('0', 'Yêu thích'),
-            ],
+          Builder(
+            builder: (context) {
+              final favCount = context.watch<FavoritesProvider>().itemCount;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _statItem('$_orderCount', 'Đơn hàng'),
+                  Container(width: 1, height: 32, color: Colors.white30),
+                  _statItem('0', 'Đánh giá'),
+                  Container(width: 1, height: 32, color: Colors.white30),
+                  _statItem('$favCount', 'Yêu thích'),
+                ],
+              );
+            }
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
+import 'providers/favorites_provider.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
@@ -22,7 +23,11 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   ).catchError((_) => Firebase.app());
-  await GoogleSignIn.instance.initialize();
+  try {
+    await GoogleSignIn.instance.initialize();
+  } catch (e) {
+    debugPrint('GoogleSignIn initialization failed: $e');
+  }
 
   await _seedIfNeeded();
 
@@ -51,6 +56,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => FavoritesProvider()),
       ],
       child: MaterialApp(
         title: 'Beauty & Glow',

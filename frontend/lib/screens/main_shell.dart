@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/favorites_provider.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'products_screen.dart';
+import 'favorites_screen.dart';
 import 'cart_screen.dart';
 import 'profile_screen.dart';
 import 'login_screen.dart';
@@ -23,7 +25,7 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
   void _onTabTapped(int index, bool isLoggedIn) {
-    final requiresAuth = index == 2 || index == 3;
+    final requiresAuth = index == 3 || index == 4;
     if (requiresAuth && !isLoggedIn) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -40,11 +42,17 @@ class _MainShellState extends State<MainShell> {
   List<Widget> _screens(bool isLoggedIn) => [
     const HomeScreen(),
     const ProductsScreen(),
+    FavoritesScreen(onShopNowPressed: () {
+      setState(() => _currentIndex = 1);
+    }),
     CartScreen(onShopNowPressed: () {
       print('Shop Now pressed - changing index to 1');
       setState(() => _currentIndex = 1);
     }),
-    ProfileScreen(isLoggedIn: isLoggedIn),
+    ProfileScreen(
+      isLoggedIn: isLoggedIn,
+      onFavoritesPressed: () => setState(() => _currentIndex = 2),
+    ),
   ];
 
   @override
@@ -61,6 +69,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _buildBottomNav(bool isLoggedIn, int cartCount) {
+    final favCount = context.watch<FavoritesProvider>().itemCount;
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -81,9 +90,11 @@ class _MainShellState extends State<MainShell> {
             children: [
               _navItem(0, Icons.home_outlined, Icons.home, 'Home', isLoggedIn: isLoggedIn),
               _navItem(1, Icons.grid_view_outlined, Icons.grid_view, 'Products', isLoggedIn: isLoggedIn),
-              _navItem(2, Icons.shopping_bag_outlined, Icons.shopping_bag, 'Cart',
+              _navItem(2, Icons.favorite_border, Icons.favorite, 'Favorites',
+                  badge: favCount > 0 ? favCount : null, isLoggedIn: isLoggedIn),
+              _navItem(3, Icons.shopping_bag_outlined, Icons.shopping_bag, 'Cart',
                   badge: cartCount > 0 ? cartCount : null, isLoggedIn: isLoggedIn),
-              _navItem(3, Icons.person_outline, Icons.person, 'Profile', isLoggedIn: isLoggedIn),
+              _navItem(4, Icons.person_outline, Icons.person, 'Profile', isLoggedIn: isLoggedIn),
             ],
           ),
         ),
