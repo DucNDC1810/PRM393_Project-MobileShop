@@ -13,6 +13,7 @@ import 'chat_screen.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 import 'wallet_screen.dart';
+import 'my_reviews_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.isLoggedIn = false});
@@ -143,7 +144,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       MaterialPageRoute(builder: (_) => const WalletScreen()),
                     );
                   }),
-                  _MenuItem(Icons.payment_outlined, 'Phương thức thanh toán', () {}),
+                  _MenuItem(Icons.payment_outlined, 'Phương thức thanh toán', () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const WalletScreen()),
+                    );
+                  }),
                 ]),
                 _buildMenuSection('Đơn hàng', [
                   _MenuItem(Icons.receipt_long_outlined, 'Lịch sử đơn hàng', () {
@@ -152,7 +157,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   }),
                   _MenuItem(Icons.favorite_border, 'Danh sách yêu thích', () {}),
-                  _MenuItem(Icons.star_border, 'Đánh giá của tôi', () {}),
+                  _MenuItem(Icons.star_border, 'Đánh giá của tôi', () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const MyReviewsScreen()),
+                    );
+                  }),
                 ]),
                 _buildMenuSection('Cài đặt', [
                   _MenuItem(Icons.notifications_outlined, 'Thông báo', () {
