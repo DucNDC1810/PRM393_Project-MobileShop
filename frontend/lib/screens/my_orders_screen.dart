@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/format_utils.dart';
 import 'chat_screen.dart';
+import 'review_screen.dart';
 
 class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({super.key});
@@ -450,7 +451,30 @@ class _OrderFooter extends StatelessWidget {
                 ),
               ),
             ),
-            if (status.toLowerCase().contains('giao') &&
+            if (status == 'Hoàn thành') ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => showReviewSheet(context, docId, items),
+                  icon: const Icon(Icons.star_outline, size: 16),
+                  label: const Text(
+                    'Đánh giá',
+                    style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFBC02D),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ] else if (status.toLowerCase().contains('giao') &&
                 status.toLowerCase() != 'hoàn thành') ...[
               const SizedBox(width: 12),
               Expanded(
@@ -474,8 +498,7 @@ class _OrderFooter extends StatelessWidget {
                   ),
                 ),
               ),
-            ] else if (status.toLowerCase() != 'hoàn thành' &&
-                status.toLowerCase() != 'đã hủy') ...[
+            ] else if (status.toLowerCase() != 'đã hủy') ...[
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(

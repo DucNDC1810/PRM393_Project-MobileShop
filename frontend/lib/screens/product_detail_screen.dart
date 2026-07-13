@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
@@ -251,6 +252,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                   // Cosmetics info fields
                   _buildCosmeticsInfo(p),
+
+                  // Reviews section
+                  _ReviewsSection(productId: p['id'] as String? ?? ''),
 
                   // Specs
                   if (specs.isNotEmpty) ...[
@@ -597,5 +601,223 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (m) => '${m[1]}.',
         );
+  }
+}
+
+/// Section hiển thị danh sách đánh giá của sản phẩm từ Firestore.
+class _ReviewsSection extends StatelessWidget {
+  final String productId;
+
+  const _ReviewsSection({required this.productId});
+
+  @override
+  Widget build(BuildContext context) {
+    if (productId.isEmpty) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reviews')
+          .where('product_id', isEqualTo: productId)
+          .orderBy('created_at', descending: true)
+          .limit(20)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Đánh giá sản phẩm',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.onSurface,
+                    fontFamily: 'DM Sans',
+                  ),
+                ),
+                const Spacer(),
+                if (docs.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8E1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: Color(0xFFFBC02D), size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          _avgStars(docs).toStringAsFixed(1),
+                          style: const TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF795548),
+                          ),
+                        ),
+                        Text(
+                          ' (${docs.length})',
+                          style: const TextStyle(
+                            fontFamily: 'DM Sans',
+                            fontSize: 11,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (docs.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Column(
+                  children: [
+                    Text('💬', style: TextStyle(fontSize: 32)),
+                    SizedBox(height: 8),
+                    Text(
+                      'Chưa có đánh giá nào.\nHãy là người đầu tiên đánh giá!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 13,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...docs.map((doc) => _ReviewCard(data: doc.data() as Map<String, dynamic>)),
+            const SizedBox(height: 24),
+          ],
+        );
+      },
+    );
+  }
+
+  double _avgStars(List<QueryDocumentSnapshot> docs) {
+    if (docs.isEmpty) return 0;
+    final total = docs.fold<int>(
+        0, (sum, d) => sum + ((d.data() as Map)['stars'] as int? ?? 5));
+    return total / docs.length;
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const _ReviewCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final userName = data['user_name'] as String? ?? 'Khách hàng';
+    final stars = data['stars'] as int? ?? 5;
+    final comment = data['comment'] as String? ?? '';
+    final createdAt = (data['created_at'] as Timestamp?)?.toDate();
+    final dateStr = createdAt != null
+        ? '${createdAt.day}/${createdAt.month}/${createdAt.year}'
+        : '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primaryFixed,
+                child: Text(
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'K',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userName,
+                      style: const TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppColors.onSurface,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        ...List.generate(
+                          5,
+                          (i) => Icon(
+                            i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                            color: const Color(0xFFFBC02D),
+                            size: 14,
+                          ),
+                        ),
+                        if (dateStr.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            dateStr,
+                            style: const TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 11,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              comment,
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 13,
+                color: AppColors.onSurface,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
