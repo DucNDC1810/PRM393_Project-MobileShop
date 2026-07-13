@@ -47,16 +47,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     } else {
       final category = (p['category'] ?? '').toString().toLowerCase();
       final nameLower = name.toLowerCase();
-      if (nameLower.contains('tai nghe') || nameLower.contains('headphone') || category.contains('audio')) {
-        emoji = '🎧';
-      } else if (nameLower.contains('cáp') || nameLower.contains('sạc') || nameLower.contains('charger') || category.contains('accessory')) {
-        emoji = '🔌';
-      } else if (nameLower.contains('đồng hồ') || nameLower.contains('watch') || category.contains('wearable')) {
-        emoji = '⌚';
-      } else if (nameLower.contains('ipad') || nameLower.contains('tablet') || nameLower.contains('máy tính bảng')) {
-        emoji = '📟';
+      if (category.contains('skincare') || nameLower.contains('serum') || nameLower.contains('toner') || nameLower.contains('kem dưỡng')) {
+        emoji = '🧴';
+      } else if (category.contains('makeup') || nameLower.contains('son') || nameLower.contains('phấn') || nameLower.contains('mascara')) {
+        emoji = '💄';
+      } else if (category.contains('perfume') || nameLower.contains('nước hoa')) {
+        emoji = '🌸';
+      } else if (category.contains('cleanser') || nameLower.contains('rửa mặt') || nameLower.contains('tẩy trang')) {
+        emoji = '🫧';
+      } else if (nameLower.contains('mask') || nameLower.contains('mặt nạ')) {
+        emoji = '🎭';
       } else {
-        emoji = '📱'; // Default smartphone
+        emoji = '✨';
       }
     }
 
@@ -247,10 +249,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                  // Cosmetics info fields
+                  _buildCosmeticsInfo(p),
+
                   // Specs
                   if (specs.isNotEmpty) ...[
                     const Text(
-                      'Thông số kỹ thuật',
+                      'Thông tin chi tiết',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -267,9 +272,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       child: Column(
                         children: specs.entries.map((entry) {
-                          // Format label
                           String label = entry.key;
-                          if (label == 'screen') label = 'Màn hình';
+                          if (label == 'ingredients') label = 'Thành phần';
+                          else if (label == 'skin_type') label = 'Loại da phù hợp';
+                          else if (label == 'volume') label = 'Dung tích';
+                          else if (label == 'how_to_use') label = 'Hướng dẫn dùng';
+                          else if (label == 'origin') label = 'Xuất xứ';
+                          else if (label == 'expiry') label = 'Hạn sử dụng';
+                          else if (label == 'screen') label = 'Màn hình';
                           else if (label == 'cpu') label = 'Vi xử lý';
                           else if (label == 'ram') label = 'Bộ nhớ RAM';
                           else if (label == 'rom') label = 'Bộ nhớ trong';
@@ -439,6 +449,104 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCosmeticsInfo(Map<String, dynamic> p) {
+    final skinType = p['skin_type'] as String?;
+    final ingredients = p['ingredients'] as String?;
+    final volume = p['volume'] as String?;
+    final howToUse = p['how_to_use'] as String?;
+    final origin = p['origin'] as String?;
+
+    final rows = <Map<String, String>>[];
+    if (volume != null && volume.isNotEmpty) rows.add({'label': 'Dung tích', 'value': volume, 'icon': '📦'});
+    if (skinType != null && skinType.isNotEmpty) rows.add({'label': 'Loại da phù hợp', 'value': skinType, 'icon': '🌿'});
+    if (origin != null && origin.isNotEmpty) rows.add({'label': 'Xuất xứ', 'value': origin, 'icon': '🌍'});
+
+    if (rows.isEmpty && ingredients == null && howToUse == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (rows.isNotEmpty) ...[
+          const Text(
+            'Thông tin sản phẩm',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.onSurface, fontFamily: 'DM Sans'),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.outlineVariant),
+            ),
+            child: Column(
+              children: rows.asMap().entries.map((e) {
+                final isLast = e.key == rows.length - 1;
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Text(e.value['icon']!, style: const TextStyle(fontSize: 16)),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: 130,
+                            child: Text(e.value['label']!, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.onSurfaceVariant, fontSize: 13, fontFamily: 'DM Sans')),
+                          ),
+                          Expanded(
+                            child: Text(e.value['value']!, style: const TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500, fontSize: 13, fontFamily: 'DM Sans')),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isLast) const Divider(height: 0, indent: 16, endIndent: 16, color: AppColors.outlineVariant),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+        if (skinType != null && skinType.isNotEmpty) ...[
+          const Text('Loại da phù hợp', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.onSurface, fontFamily: 'DM Sans')),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: skinType.split(',').map((s) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(color: AppColors.primaryFixed, borderRadius: BorderRadius.circular(20)),
+              child: Text(s.trim(), style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'DM Sans')),
+            )).toList(),
+          ),
+          const SizedBox(height: 24),
+        ],
+        if (howToUse != null && howToUse.isNotEmpty) ...[
+          const Text('Hướng dẫn sử dụng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.onSurface, fontFamily: 'DM Sans')),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.green.shade100)),
+            child: Text(howToUse, style: const TextStyle(fontSize: 13, color: AppColors.onSurface, height: 1.5, fontFamily: 'DM Sans')),
+          ),
+          const SizedBox(height: 24),
+        ],
+        if (ingredients != null && ingredients.isNotEmpty) ...[
+          const Text('Thành phần chính', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.onSurface, fontFamily: 'DM Sans')),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: AppColors.surfaceContainerLowest, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.outlineVariant)),
+            child: Text(ingredients, style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant, height: 1.5, fontFamily: 'DM Sans')),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ],
     );
   }
 
