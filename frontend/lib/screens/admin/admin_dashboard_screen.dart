@@ -1,8 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../theme/app_theme.dart';
+import 'admin_chat_detail_screen.dart';
 import 'admin_product_form_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -44,8 +47,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: AppColors.primary),
-          onPressed: () {},
+          icon: const Icon(Icons.admin_panel_settings, color: AppColors.primary),
+          onPressed: _handleLogout,
+          tooltip: 'Đăng xuất',
         ),
         title: const Text(
           'Admin Dashboard',
@@ -57,17 +61,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         ),
         centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: AppColors.primary),
-            onPressed: () {},
-          ),
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: GestureDetector(
-              onTap: _handleLogout,
-              child: const CircleAvatar(
-                radius: 16,
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=47'),
+            child: TextButton.icon(
+              onPressed: _handleLogout,
+              icon: const Icon(Icons.logout, color: AppColors.primary, size: 18),
+              label: const Text(
+                'Đăng xuất',
+                style: TextStyle(color: AppColors.primary, fontFamily: 'DM Sans', fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),
           ),
@@ -315,216 +316,145 @@ class _InventoryTab extends StatelessWidget {
   }
 }
 
-class _CustomerSupportTab extends StatefulWidget {
+class _CustomerSupportTab extends StatelessWidget {
   const _CustomerSupportTab();
 
   @override
-  State<_CustomerSupportTab> createState() => _CustomerSupportTabState();
-}
-
-class _CustomerSupportTabState extends State<_CustomerSupportTab> {
-  String _selectedFilter = 'All Messages';
-  final List<String> _filters = ['All Messages', 'Skin Consultation', 'Order Inquiry'];
-
-  final List<Map<String, dynamic>> _mockChats = [
-    {
-      'name': 'Elena Rose',
-      'avatar': 'https://i.pravatar.cc/150?img=1',
-      'tag': 'SKIN CONSULTATION',
-      'message': 'Which serum would you recommend for s...',
-      'online': true,
-    },
-    {
-      'name': 'Sarah Jenkins',
-      'avatar': 'https://i.pravatar.cc/150?img=5',
-      'tag': 'ORDER INQUIRY',
-      'message': 'Hello, I haven\'t received my tracking numbe...',
-      'online': false,
-    },
-    {
-      'name': 'Maya Patel',
-      'avatar': 'https://i.pravatar.cc/150?img=9',
-      'tag': 'SKIN CONSULTATION',
-      'message': 'Thank you! The Glow Mask really helped wi...',
-      'online': false,
-    },
-    {
-      'name': 'Julian Choi',
-      'avatar': 'https://i.pravatar.cc/150?img=11',
-      'tag': 'ORDER INQUIRY',
-      'message': 'Is it possible to add one more item to my cur...',
-      'online': false,
-    },
-    {
-      'name': 'Chloe Vance',
-      'avatar': 'https://i.pravatar.cc/150?img=16',
-      'tag': 'SKIN CONSULTATION',
-      'message': 'Can I use the retinol and vitamin C together...',
-      'online': false,
-    },
-  ];
-
-  @override
   Widget build(BuildContext context) {
-    final filteredChats = _selectedFilter == 'All Messages'
-        ? _mockChats
-        : _mockChats.where((chat) => chat['tag'] == _selectedFilter.toUpperCase()).toList();
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('conversations')
+          .orderBy('lastMessageTime', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+        }
 
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              // Search Bar
-              Container(
-                height: 48,
+        if (snapshot.hasError) {
+          return const Center(child: Text('Đã có lỗi xảy ra.', style: TextStyle(fontFamily: 'DM Sans')));
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+
+        if (docs.isEmpty) {
+          return const Center(
+            child: Text(
+              'Chưa có cuộc trò chuyện nào.',
+              style: TextStyle(color: AppColors.onSurfaceVariant, fontFamily: 'DM Sans'),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            final userId = data['userId'] as String? ?? docs[index].id;
+            final userName = data['userName'] as String? ?? 'Khách hàng';
+            final lastMessage = data['lastMessage'] as String? ?? '';
+            final unread = (data['unreadByAdmin'] as num?)?.toInt() ?? 0;
+            final lastTime = (data['lastMessageTime'] as Timestamp?)?.toDate();
+            final timeStr = lastTime != null
+                ? DateFormat('HH:mm dd/MM').format(lastTime)
+                : '';
+
+            return GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AdminChatDetailScreen(userId: userId, userName: userName),
+                ),
+              ),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search conversations...',
-                    hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                    prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: _filters.map((filter) {
-                    final isSelected = _selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedFilter = filter),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary : Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            filter,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: AppColors.primaryFixed,
+                      child: Text(
+                        userName.isNotEmpty ? userName[0].toUpperCase() : 'K',
+                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 18),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Chat List
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 16), // padding for list
-                  itemCount: filteredChats.length,
-                  itemBuilder: (context, index) {
-                    final chat = filteredChats[index];
-                    final isSkin = chat['tag'] == 'SKIN CONSULTATION';
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Stack(
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundImage: NetworkImage(chat['avatar']),
-                              ),
-                              if (chat['online'])
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: Colors.green,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
-                                    ),
-                                  ),
+                              Text(
+                                userName,
+                                style: TextStyle(
+                                  fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.bold,
+                                  fontSize: 15,
+                                  color: AppColors.onSurface,
+                                  fontFamily: 'DM Sans',
                                 ),
+                              ),
+                              Text(
+                                timeStr,
+                                style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, fontFamily: 'DM Sans'),
+                              ),
                             ],
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  chat['name'],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: AppColors.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isSkin ? const Color(0xFFFFE4D6) : const Color(0xFFEADDF3),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    chat['tag'],
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.primary.withOpacity(0.8),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  chat['message'],
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  lastMessage.isEmpty ? 'Chưa có tin nhắn' : lastMessage,
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.grey.shade600,
+                                    color: unread > 0 ? AppColors.onSurface : Colors.grey.shade600,
+                                    fontWeight: unread > 0 ? FontWeight.w600 : FontWeight.normal,
+                                    fontFamily: 'DM Sans',
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                            ),
+                              ),
+                              if (unread > 0)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '$unread',
+                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
+            );
+          },
+        );
+      },
     );
   }
 }

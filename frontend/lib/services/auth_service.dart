@@ -19,9 +19,27 @@ class AuthService {
     await _auth.currentUser?.reload();
   }
 
-  Future<UserCredential> login(String email, String password) async {
+  Future<UserCredential> login(String emailOrUsername, String password) async {
+    String email = emailOrUsername.trim();
+
+    // Nếu không phải email thì tìm email qua username trong Firestore
+    if (!email.contains('@')) {
+      final query = await _db
+          .collection('users')
+          .where('name', isEqualTo: email)
+          .limit(1)
+          .get();
+      if (query.docs.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'Không tìm thấy tài khoản với tên người dùng này.',
+        );
+      }
+      email = query.docs.first.data()['email'] as String;
+    }
+
     return await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
+      email: email,
       password: password,
     );
   }

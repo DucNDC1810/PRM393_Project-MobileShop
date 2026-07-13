@@ -393,8 +393,8 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               const SizedBox(height: 24),
 
-              // Email
-              _fieldLabel('Email'),
+              // Email hoặc Username
+              _fieldLabel('Email hoặc tên người dùng'),
               const SizedBox(height: 6),
               _emailField(),
               const SizedBox(height: 16),
@@ -597,14 +597,11 @@ class _LoginScreenState extends State<LoginScreen>
         style: const TextStyle(
             fontSize: 14, color: AppColors.onSurface, fontFamily: 'DM Sans'),
         decoration: _inputDeco(
-          hint: 'email@domain.com',
-          prefix: Icons.mail_outline_rounded,
+          hint: 'email@domain.com hoặc tên người dùng',
+          prefix: Icons.person_outline_rounded,
         ),
         validator: (v) {
-          if (v == null || v.isEmpty) return 'Vui lòng nhập email';
-          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v)) {
-            return 'Vui lòng nhập đúng định dạng email';
-          }
+          if (v == null || v.isEmpty) return 'Vui lòng nhập email hoặc tên người dùng';
           return null;
         },
       );

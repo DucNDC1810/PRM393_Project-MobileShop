@@ -284,7 +284,15 @@ class MyOrdersScreen extends StatelessWidget {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const ChatScreen(),
+                                        builder: (context) => ChatScreen(
+                                          orderInfo: {
+                                            'orderId': orderId,
+                                            'status': status,
+                                            'total': total,
+                                            'items': items,
+                                            'date': dateStr,
+                                          },
+                                        ),
                                       ),
                                     );
                                   },
@@ -306,31 +314,26 @@ class MyOrdersScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    // Action
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
+                              if (status == 'Đang giao') ...[
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _confirmReceived(context, orderDoc.id),
+                                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                                    label: const Text(
+                                      'Đã nhận hàng',
+                                      style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.bold),
                                     ),
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    elevation: 0,
-                                  ),
-                                  child: const Text(
-                                    'Theo dõi đơn hàng',
-                                    style: TextStyle(
-                                      fontFamily: 'DM Sans',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green.shade600,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      elevation: 0,
                                     ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ],
@@ -341,6 +344,51 @@ class MyOrdersScreen extends StatelessWidget {
               },
             ),
     );
+  }
+
+  Future<void> _confirmReceived(BuildContext context, String docId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Xác nhận đã nhận hàng', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
+        content: const Text('Bạn xác nhận đã nhận được hàng và đơn hàng này sẽ được hoàn tất?', style: TextStyle(fontFamily: 'DM Sans')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade600, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Xác nhận', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(docId).update({
+        'status': 'Hoàn thành',
+        'received_at': FieldValue.serverTimestamp(),
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cảm ơn bạn! Đơn hàng đã được xác nhận hoàn tất.', style: TextStyle(fontFamily: 'DM Sans')),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Có lỗi xảy ra, vui lòng thử lại.'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Widget _statusBadge(String status) {
