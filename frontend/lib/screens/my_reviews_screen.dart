@@ -101,6 +101,8 @@ class _MyReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final productName = data['product_name'] as String? ?? 'Sản phẩm';
     final productEmoji = data['product_emoji'] as String? ?? '✨';
+    final productImage = data['product_image'] as String? ?? '';
+    final hasImage = productImage.startsWith('http');
     final stars = data['stars'] as int? ?? 5;
     final comment = data['comment'] as String? ?? '';
     final createdAt = (data['created_at'] as Timestamp?)?.toDate();
@@ -126,20 +128,32 @@ class _MyReviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product name + emoji
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   color: AppColors.primaryFixed,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.outlineVariant),
                 ),
-                child: Center(
-                  child: Text(productEmoji,
-                      style: const TextStyle(fontSize: 22)),
-                ),
+                child: hasImage
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: Image.network(
+                          productImage,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Text(productEmoji,
+                                style: const TextStyle(fontSize: 26)),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(productEmoji,
+                            style: const TextStyle(fontSize: 26)),
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(

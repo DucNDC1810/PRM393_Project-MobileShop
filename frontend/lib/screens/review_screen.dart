@@ -77,11 +77,24 @@ class _ReviewSheetState extends State<_ReviewSheet> {
       if (productId.isEmpty || _alreadyReviewed.contains(productId)) continue;
 
       final comment = _controllers[i].text.trim();
+
+      // Extract image url from item
+      String? productImage;
+      final imagesList = item['images'];
+      if (imagesList is List && imagesList.isNotEmpty) {
+        final first = imagesList.first?.toString() ?? '';
+        if (first.startsWith('http')) productImage = first;
+      } else if (item['image_url'] != null) {
+        final url = item['image_url'].toString();
+        if (url.startsWith('http')) productImage = url;
+      }
+
       final docRef = reviewsRef.doc();
       batch.set(docRef, {
         'product_id': productId,
         'product_name': item['name'] ?? '',
         'product_emoji': item['emoji'] ?? '✨',
+        'product_image': productImage ?? '',
         'order_id': widget.orderId,
         'user_email': user.email,
         'user_name': user.displayName ?? 'Khách hàng',
