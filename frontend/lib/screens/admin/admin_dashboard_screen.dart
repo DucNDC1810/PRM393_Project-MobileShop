@@ -420,7 +420,10 @@ class _OrdersTab extends StatelessWidget {
             final total = (order['total'] ?? 0) as num;
             final items = order['items'] as List? ?? [];
             final email = order['user_email'] as String? ?? '';
-            final name = order['receiver_name'] as String? ?? order['user_name'] as String? ?? '';
+            final shippingInfo = order['shipping_info'] as Map<String, dynamic>?;
+            final name = shippingInfo?['name'] as String? ?? order['receiver_name'] as String? ?? order['user_name'] as String? ?? '';
+            final phone = shippingInfo?['phone'] as String? ?? '';
+            final address = [shippingInfo?['district'], shippingInfo?['city']].where((e) => e != null && e.toString().isNotEmpty).join(', ');
             final createdAt = order['created_at'] as Timestamp?;
             final dateStr = createdAt != null
                 ? DateFormat('dd/MM/yyyy HH:mm').format(createdAt.toDate())
@@ -488,14 +491,30 @@ class _OrdersTab extends StatelessWidget {
                           Row(children: [
                             const Icon(Icons.person_outline, size: 14, color: AppColors.onSurfaceVariant),
                             const SizedBox(width: 6),
-                            Text(name, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 13, fontWeight: FontWeight.w600)),
+                            Expanded(child: Text(name, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 13, fontWeight: FontWeight.w600))),
                           ]),
+                        if (phone.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(children: [
+                            const Icon(Icons.phone_outlined, size: 14, color: AppColors.onSurfaceVariant),
+                            const SizedBox(width: 6),
+                            Text(phone, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant)),
+                          ]),
+                        ],
+                        if (address.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(children: [
+                            const Icon(Icons.location_on_outlined, size: 14, color: AppColors.onSurfaceVariant),
+                            const SizedBox(width: 6),
+                            Expanded(child: Text(address, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant))),
+                          ]),
+                        ],
                         if (email.isNotEmpty) ...[
                           const SizedBox(height: 2),
                           Row(children: [
                             const Icon(Icons.email_outlined, size: 14, color: AppColors.onSurfaceVariant),
                             const SizedBox(width: 6),
-                            Text(email, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant)),
+                            Expanded(child: Text(email, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant))),
                           ]),
                         ],
                         const SizedBox(height: 10),
