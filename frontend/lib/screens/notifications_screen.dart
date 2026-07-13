@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -9,72 +12,84 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final List<Map<String, dynamic>> _notifications = [
+  // Track which order doc IDs the user has already read
+  final Set<String> _readIds = {};
+
+  // Static promo/tip notifications always shown
+  final List<Map<String, dynamic>> _staticNotifs = [
     {
-      'title': '🎉 Đơn hàng đã được xác nhận!',
-      'body': 'Đơn hàng #A3F21B của bạn đã được xác nhận và đang được đóng gói. Dự kiến giao hàng trong 2–3 ngày làm việc.',
-      'time': '10 phút trước',
-      'type': 'order',
-      'is_read': false,
-    },
-    {
-      'title': '🚚 Đơn hàng đang được giao',
-      'body': 'Đơn hàng #B7C90D đã được giao cho đơn vị vận chuyển. Bạn có thể theo dõi đơn hàng trong mục "Đơn hàng của tôi".',
-      'time': '1 giờ trước',
-      'type': 'order',
-      'is_read': false,
-    },
-    {
+      'id': 'promo_1',
       'title': '⚡ Flash Sale Mỹ Phẩm – Giảm đến 40%!',
-      'body': 'Hôm nay duy nhất! Toàn bộ sản phẩm Innisfree, Laneige và The Face Shop giảm giá sốc đến 40%. Nhập mã BEAUTY40 để áp dụng ngay!',
-      'time': '3 giờ trước',
+      'body': 'Toàn bộ sản phẩm Innisfree, Laneige và The Face Shop giảm giá sốc đến 40%. Nhập mã BEAUTY40 để áp dụng ngay!',
       'type': 'promo',
-      'is_read': false,
+      'time': '3 giờ trước',
     },
     {
+      'id': 'tip_1',
       'title': '🌸 Sản phẩm mới vừa về!',
       'body': 'Bộ dưỡng da Laneige Water Bank Blue Hyaluronic vừa có mặt tại Beauty & Glow. Sản phẩm giữ ẩm chuyên sâu cho mọi loại da.',
-      'time': '1 ngày trước',
       'type': 'new_product',
-      'is_read': false,
+      'time': '1 ngày trước',
     },
     {
-      'title': '💌 Ưu đãi thành viên tháng 7',
-      'body': 'Là thành viên Gold, bạn được tặng thêm 15% cho mọi đơn hàng trong tháng 7. Ưu đãi áp dụng tự động khi thanh toán.',
-      'time': '2 ngày trước',
-      'type': 'promo',
-      'is_read': true,
-    },
-    {
-      'title': '✅ Đơn hàng hoàn tất',
-      'body': 'Đơn hàng #C4D11E đã được giao thành công. Hãy đánh giá sản phẩm để nhận thêm điểm thưởng nhé!',
-      'time': '3 ngày trước',
-      'type': 'order',
-      'is_read': true,
-    },
-    {
+      'id': 'tip_2',
       'title': '💡 Mẹo làm đẹp: Dưỡng da ban đêm',
       'body': 'Ban đêm là thời điểm vàng để dưỡng da. Hãy thử dùng serum Vitamin C kết hợp kem dưỡng ẩm để da sáng mịn vào buổi sáng!',
-      'time': '5 ngày trước',
       'type': 'tip',
-      'is_read': true,
+      'time': '5 ngày trước',
     },
   ];
 
-  int get _unreadCount => _notifications.where((n) => !(n['is_read'] as bool)).length;
-
-  void _markAllRead() {
-    setState(() {
-      for (final n in _notifications) {
-        n['is_read'] = true;
-      }
-    });
+  Map<String, String> _statusTitle(String status) {
+    switch (status) {
+      case 'Đã xác nhận':
+        return {
+          'title': '✅ Đơn hàng đã được xác nhận!',
+          'body': 'Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị. Dự kiến giao hàng trong 2–3 ngày làm việc.',
+          'type': 'order_confirmed',
+        };
+      case 'Đang giao':
+        return {
+          'title': '🚚 Đơn hàng đang được giao!',
+          'body': 'Đơn hàng của bạn đã được bàn giao cho đơn vị vận chuyển và đang trên đường đến bạn.',
+          'type': 'order_shipping',
+        };
+      case 'Hoàn thành':
+        return {
+          'title': '🎉 Đơn hàng đã giao thành công!',
+          'body': 'Đơn hàng của bạn đã được giao thành công. Cảm ơn bạn đã mua sắm tại Beauty & Glow!',
+          'type': 'order_done',
+        };
+      case 'Đã hủy':
+        return {
+          'title': '❌ Đơn hàng đã bị hủy',
+          'body': 'Đơn hàng của bạn đã bị hủy. Nếu bạn đã thanh toán, số tiền sẽ được hoàn lại trong 3–5 ngày làm việc.',
+          'type': 'order_cancelled',
+        };
+      case 'Chờ xử lý':
+        return {
+          'title': '⏳ Đơn hàng đang chờ xử lý',
+          'body': 'Đơn hàng của bạn đã được tiếp nhận và đang chờ xác nhận từ cửa hàng.',
+          'type': 'order_pending',
+        };
+      default:
+        return {
+          'title': '📦 Cập nhật đơn hàng',
+          'body': 'Trạng thái đơn hàng của bạn đã được cập nhật: $status.',
+          'type': 'order',
+        };
+    }
   }
 
-  void _markRead(int index) {
-    if (!(_notifications[index]['is_read'] as bool)) {
-      setState(() => _notifications[index]['is_read'] = true);
-    }
+  String _formatTime(Timestamp? ts) {
+    if (ts == null) return '';
+    final now = DateTime.now();
+    final dt = ts.toDate();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Vừa xong';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+    if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+    return '${diff.inDays} ngày trước';
   }
 
   void _showDetail(Map<String, dynamic> n) {
@@ -93,10 +108,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-              ),
+              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
             ),
             const SizedBox(height: 20),
             Row(
@@ -108,25 +120,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Text(
-                    n['title'] as String,
-                    style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.onSurface),
-                  ),
+                  child: Text(n['title'] as String, style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.onSurface)),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             const Divider(color: AppColors.outlineVariant),
-            const SizedBox(height: 16),
-            Text(
-              n['body'] as String,
-              style: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, color: AppColors.onSurface, height: 1.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              n['time'] as String,
-              style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant),
-            ),
+            const SizedBox(height: 12),
+            Text(n['body'] as String, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, color: AppColors.onSurface, height: 1.6)),
+            if ((n['orderId'] as String? ?? '').isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppColors.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  children: [
+                    const Icon(Icons.receipt_long_outlined, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text('Mã đơn: #${(n['orderId'] as String).substring(0, 8).toUpperCase()}',
+                        style: const TextStyle(fontFamily: 'DM Sans', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            if ((n['time'] as String? ?? '').isNotEmpty)
+              Text(n['time'] as String, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant)),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -150,131 +169,207 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(title: const Text('Thông báo', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)), centerTitle: false, backgroundColor: AppColors.surface, foregroundColor: AppColors.primary, elevation: 0.5),
+        body: const Center(child: Text('Đăng nhập để xem thông báo.', style: TextStyle(fontFamily: 'DM Sans', color: AppColors.onSurfaceVariant))),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Text('Thông báo', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
-            if (_unreadCount > 0) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
-                child: Text('$_unreadCount', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ],
-        ),
+        title: const Text('Thông báo', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
         centerTitle: false,
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.primary,
         elevation: 0.5,
         actions: [
-          if (_unreadCount > 0)
-            TextButton(
-              onPressed: _markAllRead,
-              child: const Text('Đọc tất cả', style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
-            ),
+          TextButton(
+            onPressed: () => setState(() => _readIds.addAll(
+              _staticNotifs.map((n) => n['id'] as String),
+            )),
+            child: const Text('Đọc tất cả', style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
         ],
       ),
-      body: _notifications.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('🔔', style: TextStyle(fontSize: 64)),
-                  SizedBox(height: 16),
-                  Text('Không có thông báo nào', style: TextStyle(fontFamily: 'DM Sans', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
-                  SizedBox(height: 8),
-                  Text('Thông báo mới sẽ xuất hiện tại đây.', style: TextStyle(fontFamily: 'DM Sans', color: AppColors.onSurfaceVariant, fontSize: 13)),
-                ],
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _notifications.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final n = _notifications[index];
-                final isRead = n['is_read'] as bool;
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('orders')
+            .where('user_email', isEqualTo: user.email)
+            .orderBy('created_at', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          // Build order notifications from real Firestore data
+          final orderNotifs = <Map<String, dynamic>>[];
 
-                return GestureDetector(
-                  onTap: () {
-                    _markRead(index);
-                    _showDetail(n);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isRead ? AppColors.surfaceContainerLowest : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: isRead ? AppColors.outlineVariant : AppColors.primary.withOpacity(0.2)),
-                      boxShadow: isRead
-                          ? []
-                          : [BoxShadow(color: AppColors.primary.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2))],
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(color: _getIconBgColor(n['type'] as String), shape: BoxShape.circle),
-                          child: Center(child: Icon(_getIconData(n['type'] as String), color: _getIconColor(n['type'] as String), size: 22)),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      n['title'] as String,
-                                      style: TextStyle(
-                                        fontFamily: 'DM Sans',
-                                        fontWeight: isRead ? FontWeight.w600 : FontWeight.w800,
-                                        fontSize: 13.5,
-                                        color: AppColors.onSurface,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  if (!isRead)
-                                    Container(
-                                      width: 8, height: 8,
-                                      margin: const EdgeInsets.only(top: 4),
-                                      decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                n['body'] as String,
-                                style: TextStyle(fontFamily: 'DM Sans', fontSize: 12.5, color: isRead ? AppColors.onSurfaceVariant : AppColors.onSurface.withOpacity(0.75), height: 1.4),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(n['time'] as String, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 10, color: Colors.grey)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+          if (snapshot.hasData) {
+            for (final doc in snapshot.data!.docs) {
+              final order = doc.data() as Map<String, dynamic>;
+              final status = order['status'] as String? ?? '';
+              final createdAt = order['updated_at'] as Timestamp? ?? order['created_at'] as Timestamp?;
+
+              // Only show meaningful statuses
+              if (['Đã xác nhận', 'Đang giao', 'Hoàn thành', 'Đã hủy', 'Chờ xử lý'].contains(status)) {
+                final info = _statusTitle(status);
+                orderNotifs.add({
+                  'id': doc.id,
+                  'orderId': doc.id,
+                  'title': info['title']!,
+                  'body': info['body']!,
+                  'type': info['type']!,
+                  'time': _formatTime(createdAt),
+                  'is_read': _readIds.contains(doc.id),
+                });
+              }
+            }
+          }
+
+          // Combine: order notifs first, then static promos
+          final allNotifs = [
+            ...orderNotifs,
+            ..._staticNotifs.map((n) => {
+              ...n,
+              'is_read': _readIds.contains(n['id']),
+            }),
+          ];
+
+          final unreadCount = allNotifs.where((n) => !(n['is_read'] as bool)).length;
+
+          return Column(
+            children: [
+              // Unread badge bar
+              if (unreadCount > 0)
+                Container(
+                  width: double.infinity,
+                  color: AppColors.primaryFixed,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
+                        child: Text('$unreadCount', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('thông báo chưa đọc', style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => setState(() {
+                          for (final n in allNotifs) _readIds.add(n['id'] as String);
+                        }),
+                        child: const Text('Đọc tất cả', style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+
+              Expanded(
+                child: snapshot.connectionState == ConnectionState.waiting
+                    ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                    : allNotifs.isEmpty
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('🔔', style: TextStyle(fontSize: 64)),
+                                SizedBox(height: 16),
+                                Text('Không có thông báo nào', style: TextStyle(fontFamily: 'DM Sans', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+                                SizedBox(height: 8),
+                                Text('Thông báo đơn hàng sẽ xuất hiện tại đây.', style: TextStyle(fontFamily: 'DM Sans', color: AppColors.onSurfaceVariant, fontSize: 13)),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: allNotifs.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final n = allNotifs[index];
+                              final isRead = n['is_read'] as bool;
+                              final type = n['type'] as String;
+
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() => _readIds.add(n['id'] as String));
+                                  _showDetail(n);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: isRead ? AppColors.surfaceContainerLowest : Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: isRead ? AppColors.outlineVariant : AppColors.primary.withOpacity(0.2)),
+                                    boxShadow: isRead ? [] : [BoxShadow(color: AppColors.primary.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2))],
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: 44, height: 44,
+                                        decoration: BoxDecoration(color: _getIconBgColor(type), shape: BoxShape.circle),
+                                        child: Center(child: Icon(_getIconData(type), color: _getIconColor(type), size: 22)),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    n['title'] as String,
+                                                    style: TextStyle(fontFamily: 'DM Sans', fontWeight: isRead ? FontWeight.w600 : FontWeight.w800, fontSize: 13.5, color: AppColors.onSurface),
+                                                  ),
+                                                ),
+                                                if (!isRead) ...[
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    width: 8, height: 8,
+                                                    margin: const EdgeInsets.only(top: 4),
+                                                    decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Text(
+                                              n['body'] as String,
+                                              style: TextStyle(fontFamily: 'DM Sans', fontSize: 12.5, color: isRead ? AppColors.onSurfaceVariant : AppColors.onSurface.withOpacity(0.8), height: 1.4),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(n['time'] as String, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 10, color: Colors.grey)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
   IconData _getIconData(String type) {
     switch (type) {
-      case 'order': return Icons.local_shipping_outlined;
+      case 'order_confirmed': return Icons.check_circle_outline;
+      case 'order_shipping': return Icons.local_shipping_outlined;
+      case 'order_done': return Icons.done_all;
+      case 'order_cancelled': return Icons.cancel_outlined;
+      case 'order_pending': return Icons.hourglass_empty_outlined;
       case 'promo': return Icons.local_offer_outlined;
       case 'new_product': return Icons.new_releases_outlined;
       case 'tip': return Icons.lightbulb_outline;
@@ -284,7 +379,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Color _getIconColor(String type) {
     switch (type) {
-      case 'order': return Colors.green;
+      case 'order_confirmed': return Colors.blue;
+      case 'order_shipping': return Colors.orange;
+      case 'order_done': return Colors.green;
+      case 'order_cancelled': return Colors.red;
+      case 'order_pending': return Colors.grey.shade700;
       case 'promo': return AppColors.primary;
       case 'new_product': return Colors.orange;
       case 'tip': return Colors.amber.shade800;
@@ -294,7 +393,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Color _getIconBgColor(String type) {
     switch (type) {
-      case 'order': return Colors.green.withOpacity(0.12);
+      case 'order_confirmed': return Colors.blue.withOpacity(0.12);
+      case 'order_shipping': return Colors.orange.withOpacity(0.12);
+      case 'order_done': return Colors.green.withOpacity(0.12);
+      case 'order_cancelled': return Colors.red.withOpacity(0.12);
+      case 'order_pending': return Colors.grey.withOpacity(0.12);
       case 'promo': return AppColors.primaryFixed;
       case 'new_product': return Colors.orange.withOpacity(0.12);
       case 'tip': return Colors.amber.withOpacity(0.12);
