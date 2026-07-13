@@ -21,7 +21,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().loadProducts();
     });
@@ -82,7 +82,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'DM Sans'),
           tabs: const [
             Tab(text: 'Inventory'),
-            Tab(text: 'Customer Support'),
+            Tab(text: 'Orders'),
+            Tab(text: 'Support'),
           ],
         ),
       ),
@@ -90,6 +91,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         controller: _tabController,
         children: const [
           _InventoryTab(),
+          _OrdersTab(),
           _CustomerSupportTab(),
         ],
       ),
@@ -312,6 +314,255 @@ class _InventoryTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _OrdersTab extends StatelessWidget {
+  const _OrdersTab();
+
+  static const List<String> _statuses = [
+    'Chờ xử lý',
+    'Đã xác nhận',
+    'Đang giao',
+    'Hoàn thành',
+    'Đã hủy',
+  ];
+
+  Future<void> _updateStatus(BuildContext context, String docId, String currentStatus) async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cập nhật trạng thái', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold, fontSize: 16)),
+        children: _statuses.map((s) {
+          final isCurrent = s == currentStatus;
+          return SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, s),
+            child: Row(
+              children: [
+                Icon(
+                  isCurrent ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  color: isCurrent ? AppColors.primary : Colors.grey,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(s, style: TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: isCurrent ? FontWeight.w700 : FontWeight.normal, color: isCurrent ? AppColors.primary : AppColors.onSurface)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+
+    if (selected == null || selected == currentStatus || !context.mounted) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(docId).update({
+        'status': selected,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Đã cập nhật: $selected'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'Hoàn thành': return Colors.green;
+      case 'Đang giao': return Colors.orange;
+      case 'Đã xác nhận': return Colors.blue;
+      case 'Đã hủy': return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .orderBy('created_at', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Đã có lỗi xảy ra.', style: TextStyle(fontFamily: 'DM Sans')));
+        }
+
+        final docs = snapshot.data?.docs ?? [];
+
+        if (docs.isEmpty) {
+          return const Center(
+            child: Text('Chưa có đơn hàng nào.', style: TextStyle(fontFamily: 'DM Sans', color: AppColors.onSurfaceVariant)),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final order = doc.data() as Map<String, dynamic>;
+            final orderId = doc.id.substring(0, 8).toUpperCase();
+            final status = order['status'] as String? ?? 'Chờ xử lý';
+            final total = (order['total'] ?? 0) as num;
+            final items = order['items'] as List? ?? [];
+            final email = order['user_email'] as String? ?? '';
+            final name = order['receiver_name'] as String? ?? order['user_name'] as String? ?? '';
+            final createdAt = order['created_at'] as Timestamp?;
+            final dateStr = createdAt != null
+                ? DateFormat('dd/MM/yyyy HH:mm').format(createdAt.toDate())
+                : '';
+            final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+            final statusColor = _statusColor(status);
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.08),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('#$orderId', style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.onSurface)),
+                            if (dateStr.isNotEmpty)
+                              Text(dateStr, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 11, color: AppColors.onSurfaceVariant)),
+                          ],
+                        ),
+                        GestureDetector(
+                          onTap: () => _updateStatus(context, doc.id, status),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: statusColor.withOpacity(0.4)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(status, style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.w700, color: statusColor)),
+                                const SizedBox(width: 4),
+                                Icon(Icons.edit_outlined, size: 13, color: statusColor),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Body
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (name.isNotEmpty)
+                          Row(children: [
+                            const Icon(Icons.person_outline, size: 14, color: AppColors.onSurfaceVariant),
+                            const SizedBox(width: 6),
+                            Text(name, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 13, fontWeight: FontWeight.w600)),
+                          ]),
+                        if (email.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(children: [
+                            const Icon(Icons.email_outlined, size: 14, color: AppColors.onSurfaceVariant),
+                            const SizedBox(width: 6),
+                            Text(email, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant)),
+                          ]),
+                        ],
+                        const SizedBox(height: 10),
+                        Text('${items.length} sản phẩm', style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant)),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Tổng tiền:', style: TextStyle(fontFamily: 'DM Sans', fontSize: 13, color: AppColors.onSurfaceVariant)),
+                            Text(fmt.format(total), style: const TextStyle(fontFamily: 'DM Sans', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        // Quick action buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _updateStatus(context, doc.id, status),
+                                icon: const Icon(Icons.swap_horiz, size: 15),
+                                label: const Text('Đổi trạng thái', style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.w600)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.primary,
+                                  side: const BorderSide(color: AppColors.primary),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                              ),
+                            ),
+                            if (status != 'Đã hủy' && status != 'Hoàn thành') ...[
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    await FirebaseFirestore.instance.collection('orders').doc(doc.id).update({
+                                      'status': 'Đang giao',
+                                      'updated_at': FieldValue.serverTimestamp(),
+                                    });
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Đã chuyển sang Đang giao'), backgroundColor: Colors.orange),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.local_shipping_outlined, size: 15),
+                                  label: const Text('Giao hàng', style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.w600)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -337,7 +337,7 @@ class MyOrdersScreen extends StatelessWidget {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: ElevatedButton(
-                                    onPressed: () {},
+                                    onPressed: () => _showTrackingDialog(context, status, orderId, dateStr),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.primary,
                                       foregroundColor: Colors.white,
@@ -361,6 +361,94 @@ class MyOrdersScreen extends StatelessWidget {
                 );
               },
             ),
+    );
+  }
+
+  void _showTrackingDialog(BuildContext context, String status, String orderId, String dateStr) {
+    final steps = [
+      {'label': 'Chờ xử lý', 'icon': Icons.hourglass_empty_outlined},
+      {'label': 'Đã xác nhận', 'icon': Icons.check_circle_outline},
+      {'label': 'Đang giao', 'icon': Icons.local_shipping_outlined},
+      {'label': 'Hoàn thành', 'icon': Icons.done_all},
+    ];
+
+    final currentIndex = steps.indexWhere((s) => s['label'] == status);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 20),
+            Text('Theo dõi đơn #$orderId', style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.onSurface)),
+            if (dateStr.isNotEmpty)
+              Text(dateStr, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: AppColors.onSurfaceVariant)),
+            const SizedBox(height: 20),
+            ...steps.asMap().entries.map((e) {
+              final i = e.key;
+              final step = e.value;
+              final isDone = currentIndex >= 0 && i <= currentIndex;
+              final isCurrent = i == currentIndex;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    children: [
+                      Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: isDone ? AppColors.primary : Colors.grey.shade200,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(step['icon'] as IconData, size: 18, color: isDone ? Colors.white : Colors.grey),
+                      ),
+                      if (i < steps.length - 1)
+                        Container(width: 2, height: 28, color: i < currentIndex ? AppColors.primary : Colors.grey.shade200),
+                    ],
+                  ),
+                  const SizedBox(width: 14),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      step['label'] as String,
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 14,
+                        fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w500,
+                        color: isCurrent ? AppColors.primary : isDone ? AppColors.onSurface : Colors.grey,
+                      ),
+                    ),
+                  ),
+                  if (isCurrent) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(10)),
+                      child: const Text('Hiện tại', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ],
+              );
+            }),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), elevation: 0),
+                child: const Text('Đóng', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
