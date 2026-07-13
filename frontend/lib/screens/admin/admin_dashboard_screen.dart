@@ -81,9 +81,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'DM Sans'),
           tabs: const [
-            Tab(text: 'Inventory'),
-            Tab(text: 'Orders'),
-            Tab(text: 'Support'),
+            Tab(text: 'Kho hàng'),
+            Tab(text: 'Đơn hàng'),
+            Tab(text: 'Hỗ trợ'),
           ],
         ),
       ),
@@ -156,7 +156,7 @@ class _InventoryTab extends StatelessWidget {
             ),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search products...',
+                hintText: 'Tìm kiếm sản phẩm...',
                 hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                 prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
                 border: InputBorder.none,
@@ -178,7 +178,7 @@ class _InventoryTab extends StatelessWidget {
               },
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text(
-                'Add New Product',
+                'Thêm sản phẩm mới',
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
               ),
               style: ElevatedButton.styleFrom(
@@ -255,7 +255,7 @@ class _InventoryTab extends StatelessWidget {
                                   Row(
                                     children: [
                                       Text(
-                                        '\$${product['price']}',
+                                        NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(product['price'] ?? 0),
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 14,
@@ -409,6 +409,7 @@ class _OrdersTab extends StatelessWidget {
           );
         }
 
+        final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: docs.length,
@@ -428,7 +429,6 @@ class _OrdersTab extends StatelessWidget {
             final dateStr = createdAt != null
                 ? DateFormat('dd/MM/yyyy HH:mm').format(createdAt.toDate())
                 : '';
-            final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
             final statusColor = _statusColor(status);
 
             return Container(

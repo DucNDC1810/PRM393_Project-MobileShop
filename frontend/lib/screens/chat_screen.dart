@@ -20,7 +20,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  String get _userId => context.read<AuthProvider>().user!.uid;
+  String get _userId => context.read<AuthProvider>().user?.uid ?? '';
   String get _userName => context.read<AuthProvider>().user?.displayName ?? 'Khách hàng';
 
   CollectionReference get _messagesRef =>

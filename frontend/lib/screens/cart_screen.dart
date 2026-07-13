@@ -35,7 +35,7 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
-    final cartItems = cart.items;
+    final cartItems = cart.itemsAsMap;
 
     final int subtotal = cart.totalAmount;
     final int discount = _couponApplied ? (subtotal * 0.1).round() : 0;

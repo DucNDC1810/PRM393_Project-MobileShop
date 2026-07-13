@@ -291,7 +291,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return '#BG$year$month$day$randomNum';
   }
 
-  Future<void> _handlePlaceOrder(CartProvider cart, List<Map<String, dynamic>> cartItems, int subtotal, int shippingFee, int total) async {
+  Future<void> _handlePlaceOrder(CartProvider cart) async {
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
@@ -308,22 +308,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       'city': _cityCtrl.text.trim(),
       'notes': _notesCtrl.text.trim(),
     };
-    
-    bool exists = _savedAddresses.any((addr) => 
-      addr['name'] == newAddress['name'] &&
-      addr['phone'] == newAddress['phone'] &&
-      addr['district'] == newAddress['district'] &&
-      addr['notes'] == newAddress['notes']
-    );
 
-    if (!exists && auth.user != null && _savedAddresses.length >= 6) {
+    final bool addressExists = _savedAddresses.any((addr) =>
+        addr['name'] == newAddress['name'] &&
+        addr['phone'] == newAddress['phone'] &&
+        addr['district'] == newAddress['district'] &&
+        addr['notes'] == newAddress['notes']);
+
+    if (!addressExists && auth.user != null && _savedAddresses.length >= 6) {
       CustomToast.showError(context, 'Sổ địa chỉ đã đầy (tối đa 6). Vui lòng chọn "Sổ địa chỉ" để xóa bớt trước khi đặt với địa chỉ mới!');
       return;
     }
 
     // Calculate total amount
-    final cartItems = context.read<CartProvider>().items;
-    final int subtotal = cartItems.fold(0, (sum, item) => sum + (item['price'] as int) * (item['quantity'] as int));
+    final cartItems = cart.itemsAsMap;
+    final int subtotal = cart.totalAmount;
     final int shippingFee = _shippingMethod == 'standard' ? (subtotal > 500000 || subtotal == 0 ? 0 : 30000) : 60000;
     final int total = subtotal - widget.discount + shippingFee;
 
@@ -387,7 +386,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'created_at': FieldValue.serverTimestamp(),
       });
 
-      if (!exists && user != null) {
+      if (!addressExists && user != null) {
         _savedAddresses.insert(0, newAddress);
         try {
           await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
@@ -477,7 +476,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
-    final cartItems = cart.items;
+    final cartItems = cart.itemsAsMap;
 
     final int subtotal = cart.totalAmount;
     
@@ -1309,7 +1308,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: () => _handlePlaceOrder(cart, cartItems, subtotal, shippingFee, total),
+        onPressed: () => _handlePlaceOrder(cart),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
