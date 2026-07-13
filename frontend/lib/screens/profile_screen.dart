@@ -23,8 +23,15 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  // Số liệu 6 tháng gần nhất (để xét rank)
   int _orderCount = 0;
-  int _loyaltyPoints = 0;
+  double _totalSpent = 0;
+  // Số liệu tháng hiện tại (để xét duy trì)
+  int _monthlyOrderCount = 0;
+  double _monthlySpent = 0;
+  // Chu kỳ 6 tháng hiện tại (để hiển thị ngày reset)
+  DateTime _periodStart = DateTime.now();
+  DateTime _periodEnd = DateTime.now();
 
   @override
   void didChangeDependencies() {
@@ -35,25 +42,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _fetchStats(String uid) async {
     try {
+      final now = DateTime.now();
+
+      // Xác định chu kỳ 6 tháng hiện tại (Jan-Jun hoặc Jul-Dec)
+      final isFirstHalf = now.month <= 6;
+      final periodStart = DateTime(now.year, isFirstHalf ? 1 : 7, 1);
+      final periodEnd = DateTime(now.year, isFirstHalf ? 7 : 13, 1);
+
       final snap = await FirebaseFirestore.instance
           .collection('orders')
           .where('user_uid', isEqualTo: uid)
           .get();
 
-      int points = 0;
+      double periodTotal = 0;
+      int periodCount = 0;
+      double monthlyTotal = 0;
+      int monthlyCount = 0;
+
       for (final doc in snap.docs) {
-        final total = (doc.data()['total'] ?? 0) as num;
-        points += (total / 1000).floor();
+        final amount = (doc.data()['total'] ?? 0) as num;
+        final createdAt = doc.data()['created_at'];
+        if (createdAt == null) continue;
+
+        final date = (createdAt as Timestamp).toDate();
+
+        // Đơn trong chu kỳ 6 tháng hiện tại → xét rank
+        if (!date.isBefore(periodStart) && date.isBefore(periodEnd)) {
+          periodTotal += amount.toDouble();
+          periodCount++;
+        }
+
+        // Đơn trong tháng hiện tại → xét duy trì
+        if (date.year == now.year && date.month == now.month) {
+          monthlyTotal += amount.toDouble();
+          monthlyCount++;
+        }
       }
 
       if (mounted) {
         setState(() {
-          _orderCount = snap.docs.length;
-          _loyaltyPoints = points;
+          _orderCount = periodCount;
+          _totalSpent = periodTotal;
+          _monthlyOrderCount = monthlyCount;
+          _monthlySpent = monthlyTotal;
+          _periodStart = periodStart;
+          _periodEnd = DateTime(periodEnd.year, periodEnd.month - 1, 30);
         });
       }
     } catch (_) {}
   }
+
+  // Rank dựa trên số liệu 6 tháng gần nhất
+  _MemberRank get _currentRank {
+    if (_orderCount >= 50 && _totalSpent >= 25000000) return _MemberRank.diamond;
+    if (_orderCount >= 25 && _totalSpent >= 5000000) return _MemberRank.gold;
+    if (_orderCount >= 5 && _totalSpent >= 1000000) return _MemberRank.silver;
+    return _MemberRank.bronze;
+  }
+
+  // Duy trì Vàng: 10 đơn + 1 triệu/tháng
+  bool get _maintainsGold =>
+      _currentRank == _MemberRank.gold &&
+      _monthlyOrderCount >= 10 &&
+      _monthlySpent >= 1000000;
+
+  // Duy trì Kim Cương: 50 đơn + 5 triệu/tháng
+  bool get _maintainsDiamond =>
+      _currentRank == _MemberRank.diamond &&
+      _monthlyOrderCount >= 50 &&
+      _monthlySpent >= 5000000;
 
   @override
   Widget build(BuildContext context) {
@@ -338,87 +395,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildLoyaltyCard() {
-    // VIP levels: Bronze < 500, Silver < 2000, Gold < 5000, Platinum >= 5000
-    String vipLabel;
-    String nextLabel;
-    int nextTarget;
-    if (_loyaltyPoints < 500) {
-      vipLabel = '🥉 Bronze';
-      nextLabel = 'Silver';
-      nextTarget = 500;
-    } else if (_loyaltyPoints < 2000) {
-      vipLabel = '💎 Silver';
-      nextLabel = 'Gold';
-      nextTarget = 2000;
-    } else if (_loyaltyPoints < 5000) {
-      vipLabel = '🥇 Gold';
-      nextLabel = 'Platinum';
-      nextTarget = 5000;
-    } else {
-      vipLabel = '💠 Platinum';
-      nextLabel = '';
-      nextTarget = 5000;
-    }
+    final rank = _currentRank;
+    final cfg = _rankConfig(rank);
+    final next = _nextRankConfig(rank);
 
-    final prevTarget = _loyaltyPoints < 500 ? 0 : _loyaltyPoints < 2000 ? 500 : _loyaltyPoints < 5000 ? 2000 : 5000;
-    final progress = nextTarget > prevTarget
-        ? ((_loyaltyPoints - prevTarget) / (nextTarget - prevTarget)).clamp(0.0, 1.0)
-        : 1.0;
-    final percent = (progress * 100).round();
-    final pointsFormatted = _loyaltyPoints.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+    final fmt = (double v) {
+      if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}tr';
+      if (v >= 1000) return '${(v / 1000).toStringAsFixed(0)}k';
+      return v.toStringAsFixed(0);
+    };
+
+    final resetStr =
+        '${_periodEnd.day.toString().padLeft(2, '0')}/${_periodEnd.month.toString().padLeft(2, '0')}/${_periodEnd.year}';
+
+    // Tiến độ lên hạng tiếp theo
+    double progress = 1.0;
+    String progressLabel = 'Đã đạt hạng cao nhất';
+    if (next != null) {
+      final op = (_orderCount / next.orderTarget).clamp(0.0, 1.0);
+      final sp = (_totalSpent / next.spentTarget).clamp(0.0, 1.0);
+      progress = (op + sp) / 2;
+      final ol = (next.orderTarget - _orderCount).clamp(0, next.orderTarget);
+      final sl = ((next.spentTarget - _totalSpent) / 1000000).clamp(0.0, 999.0);
+      progressLabel = (ol > 0 || sl > 0)
+          ? 'Còn ${ol > 0 ? "$ol đơn" : ""}${ol > 0 && sl > 0 ? " & " : ""}${sl > 0 ? "${sl.toStringAsFixed(1)}tr" : ""} để lên ${next.label}'
+          : 'Sẵn sàng lên ${next.label}!';
+    }
 
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF475569), Color(0xFF1E293B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: LinearGradient(colors: cfg.gradientColors, begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: cfg.gradientColors.first.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: tên rank + ngày reset
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Thẻ thành viên',
-                style: TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+              const Text('Thẻ thành viên', style: TextStyle(fontFamily: 'DM Sans', fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)),
+                child: Text('${cfg.icon} ${cfg.label}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700, fontFamily: 'DM Sans')),
               ),
-              Text(vipLabel, style: const TextStyle(color: Colors.white70, fontSize: 13, fontFamily: 'DM Sans')),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('Chu kỳ reset: $resetStr', style: const TextStyle(fontSize: 10, color: Colors.white54, fontFamily: 'DM Sans')),
+          const SizedBox(height: 14),
+
+          // Thống kê 6 tháng
+          Row(
+            children: [
+              Expanded(child: _statChip(Icons.shopping_bag_outlined, '$_orderCount đơn', '6 tháng qua')),
+              const SizedBox(width: 10),
+              Expanded(child: _statChip(Icons.paid_outlined, fmt(_totalSpent), '6 tháng qua')),
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$pointsFormatted điểm',
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  fontFamily: 'DM Sans',
-                ),
-              ),
-              if (nextLabel.isNotEmpty)
-                Text(
-                  'Cần thêm ${nextTarget - _loyaltyPoints} điểm\nđể lên $nextLabel',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(fontSize: 11, color: Colors.white60, height: 1.4, fontFamily: 'DM Sans'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
+
+          // Progress bar lên hạng
           ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(4)),
             child: LinearProgressIndicator(
@@ -429,13 +470,115 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            nextLabel.isNotEmpty ? '$percent% đến $nextLabel' : 'Đã đạt hạng cao nhất',
-            style: const TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'DM Sans'),
+          Text(progressLabel, style: const TextStyle(fontSize: 11, color: Colors.white70, fontFamily: 'DM Sans')),
+
+          // Duy trì Vàng
+          if (rank == _MemberRank.gold) ...[
+            const SizedBox(height: 12),
+            _maintainBanner(
+              maintained: _maintainsGold,
+              maintainedText: 'Đang duy trì hạng Vàng tháng này ✓',
+              warningText: 'Duy trì Vàng: 10 đơn & 1tr/tháng\nTháng này: $_monthlyOrderCount đơn, ${fmt(_monthlySpent)}',
+              fmt: fmt,
+            ),
+          ],
+
+          // Duy trì Kim Cương
+          if (rank == _MemberRank.diamond) ...[
+            const SizedBox(height: 12),
+            _maintainBanner(
+              maintained: _maintainsDiamond,
+              maintainedText: 'Đang duy trì hạng Kim Cương tháng này ✓',
+              warningText: 'Duy trì Kim Cương: 50 đơn & 5tr/tháng\nTháng này: $_monthlyOrderCount đơn, ${fmt(_monthlySpent)}',
+              fmt: fmt,
+            ),
+          ],
+
+          // Điều kiện lên hạng tiếp
+          if (next != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Lên ${next.label}: ${next.orderTarget} đơn & ${fmt(next.spentTarget.toDouble())} trong 6 tháng',
+              style: const TextStyle(fontSize: 11, color: Colors.white54, fontFamily: 'DM Sans'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _maintainBanner({
+    required bool maintained,
+    required String maintainedText,
+    required String warningText,
+    required String Function(double) fmt,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(10)),
+      child: Row(
+        children: [
+          Icon(
+            maintained ? Icons.verified : Icons.warning_amber_rounded,
+            color: maintained ? Colors.greenAccent : Colors.amber,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              maintained ? maintainedText : warningText,
+              style: const TextStyle(fontSize: 11, color: Colors.white, fontFamily: 'DM Sans', height: 1.4),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _statChip(IconData icon, String value, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white70, size: 18),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700, fontFamily: 'DM Sans')),
+              Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10, fontFamily: 'DM Sans')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  _RankConfig _rankConfig(_MemberRank rank) {
+    switch (rank) {
+      case _MemberRank.bronze:
+        return _RankConfig('Đồng', '🥉', [const Color(0xFF8D6E63), const Color(0xFF5D4037)], 0, 0);
+      case _MemberRank.silver:
+        return _RankConfig('Bạc', '🥈', [const Color(0xFF78909C), const Color(0xFF37474F)], 5, 1000000);
+      case _MemberRank.gold:
+        return _RankConfig('Vàng', '🥇', [const Color(0xFFF9A825), const Color(0xFFE65100)], 25, 5000000);
+      case _MemberRank.diamond:
+        return _RankConfig('Kim Cương', '💎', [const Color(0xFF1565C0), const Color(0xFF0D47A1)], 50, 25000000);
+    }
+  }
+
+  _RankConfig? _nextRankConfig(_MemberRank rank) {
+    switch (rank) {
+      case _MemberRank.bronze:
+        return _RankConfig('Bạc', '🥈', [const Color(0xFF78909C), const Color(0xFF37474F)], 5, 1000000);
+      case _MemberRank.silver:
+        return _RankConfig('Vàng', '🥇', [const Color(0xFFF9A825), const Color(0xFFE65100)], 25, 5000000);
+      case _MemberRank.gold:
+        return _RankConfig('Kim Cương', '💎', [const Color(0xFF1565C0), const Color(0xFF0D47A1)], 50, 25000000);
+      case _MemberRank.diamond:
+        return null;
+    }
   }
 
   Widget _buildMenuSection(String title, List<_MenuItem> items) {
@@ -505,4 +648,15 @@ class _MenuItem {
   final String label;
   final VoidCallback onTap;
   const _MenuItem(this.icon, this.label, this.onTap);
+}
+
+enum _MemberRank { bronze, silver, gold, diamond }
+
+class _RankConfig {
+  final String label;
+  final String icon;
+  final List<Color> gradientColors;
+  final int orderTarget;
+  final double spentTarget;
+  const _RankConfig(this.label, this.icon, this.gradientColors, this.orderTarget, this.spentTarget);
 }
