@@ -66,9 +66,21 @@ class AuthService {
     final GoogleSignInAuthentication googleAuth = googleUser.authentication;
     final String? idToken = googleAuth.idToken;
 
-    // 3. Obtain the access token by authorizing scopes
-    final clientAuth = await googleUser.authorizationClient.authorizeScopes(['email', 'profile']);
-    final String? accessToken = clientAuth.accessToken;
+    // 3. Try to get access token; fall back gracefully if scopes already granted
+    String? accessToken;
+    try {
+      final clientAuth = await googleUser.authorizationClient.authorizeScopes(['email', 'profile']);
+      accessToken = clientAuth.accessToken;
+    } catch (_) {
+      // accessToken is optional when idToken is present
+    }
+
+    if (idToken == null && accessToken == null) {
+      throw FirebaseAuthException(
+        code: 'sign-in-failed',
+        message: 'Không lấy được thông tin xác thực từ Google.',
+      );
+    }
 
     // 4. Create a new credential
     final OAuthCredential credential = GoogleAuthProvider.credential(

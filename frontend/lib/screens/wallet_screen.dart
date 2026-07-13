@@ -173,173 +173,6 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
-  void _showWithdrawDialog() {
-    final amountCtrl = TextEditingController();
-    final nameCtrl = TextEditingController();
-    final bankCtrl = TextEditingController();
-    final accountCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Rút tiền về tài khoản ngân hàng', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold, fontSize: 18)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Nhập số tiền cần rút...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.attach_money),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'Họ và tên chủ tài khoản',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.person_outline),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: bankCtrl,
-                  decoration: InputDecoration(
-                    hintText: 'Tên Ngân hàng',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.account_balance),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Gợi ý ngân hàng:', style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.onSurfaceVariant))
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  alignment: WrapAlignment.start,
-                  children: ['MB Bank', 'Vietcombank', 'Techcombank', 'TPBank', 'Agribank', 'BIDV'].map((bank) {
-                    return InkWell(
-                      onTap: () {
-                        setDialogState(() {
-                          bankCtrl.text = bank;
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-                        ),
-                        child: Text(
-                          bank,
-                          style: const TextStyle(color: AppColors.primary, fontFamily: 'DM Sans', fontWeight: FontWeight.w600, fontSize: 12),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: accountCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Số tài khoản',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    prefixIcon: const Icon(Icons.credit_card),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () async {
-                final amount = int.tryParse(amountCtrl.text.trim());
-                if (amount == null || amount <= 0) {
-                  CustomToast.showError(context, 'Số tiền rút không hợp lệ');
-                  return;
-                }
-                if (amount > _balance) {
-                  CustomToast.showError(context, 'Số dư không đủ để rút');
-                  return;
-                }
-                if (nameCtrl.text.trim().isEmpty || bankCtrl.text.trim().isEmpty || accountCtrl.text.trim().isEmpty) {
-                  CustomToast.showError(context, 'Vui lòng nhập đầy đủ thông tin rút tiền');
-                  return;
-                }
-                Navigator.pop(context); // Close dialog
-                _handleWithdraw(amount, '${nameCtrl.text.trim()} | ${bankCtrl.text.trim()} | ${accountCtrl.text.trim()}');
-              },
-              child: const Text('Rút tiền'),
-            ),
-          ],
-        );
-          }
-        );
-      },
-    );
-  }
-
-  Future<void> _handleWithdraw(int amount, String bankInfo) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-    );
-
-    try {
-      final auth = context.read<AuthProvider>();
-      final newBalance = _balance - amount;
-      
-      // Update balance
-      await FirebaseFirestore.instance.collection('users').doc(auth.user!.uid).update({
-        'wallet_balance': newBalance
-      });
-      
-      // Save transaction
-      await FirebaseFirestore.instance.collection('wallet_transactions').add({
-        'user_uid': auth.user!.uid,
-        'type': 'withdraw',
-        'amount': amount,
-        'bank_info': bankInfo,
-        'status': 'completed', // Mô phỏng rút tiền thành công ngay lập tức
-        'created_at': FieldValue.serverTimestamp(),
-      });
-
-      setState(() {
-        _balance = newBalance;
-      });
-
-      if (mounted) Navigator.of(context).pop();
-      if (mounted) {
-        CustomToast.showSuccess(context, 'Rút tiền thành công! Tiền đã được chuyển thẳng về thẻ ngân hàng của bạn.');
-      }
-    } catch (_) {
-      if (mounted) Navigator.of(context).pop();
-      if (mounted) CustomToast.showError(context, 'Đã có lỗi xảy ra.');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -402,15 +235,6 @@ class _WalletScreenState extends State<WalletScreen> {
                         label: 'Nạp tiền',
                         color: Colors.green.shade600,
                         onTap: _showDepositDialog,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _ActionButton(
-                        icon: Icons.remove_circle_outline,
-                        label: 'Rút tiền',
-                        color: Colors.orange.shade600,
-                        onTap: _showWithdrawDialog,
                       ),
                     ),
                   ],
@@ -478,11 +302,6 @@ class _WalletScreenState extends State<WalletScreen> {
                             icon = Icons.add_circle_outline;
                             color = Colors.green;
                             sign = '+';
-                          } else if (type == 'withdraw') {
-                            title = 'Rút tiền về thẻ ngân hàng';
-                            icon = Icons.remove_circle_outline;
-                            color = Colors.orange;
-                            sign = '-';
                           } else if (type == 'payment') {
                             final orderId = data.containsKey('order_id') ? data['order_id'] : '';
                             title = 'Thanh toán đơn hàng ${orderId.toString().isNotEmpty ? "#$orderId" : ""}';

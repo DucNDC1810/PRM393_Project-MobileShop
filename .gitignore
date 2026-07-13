@@ -47,6 +47,13 @@ frontend/build/
 frontend/linux/flutter/ephemeral/
 frontend/windows/flutter/ephemeral/
 frontend/macos/Flutter/ephemeral/
+
+# Flutter generated plugin registrants (auto-generated, do not commit)
+frontend/linux/flutter/generated_plugin_registrant.cc
+frontend/linux/flutter/generated_plugins.cmake
+frontend/macos/Flutter/GeneratedPluginRegistrant.swift
+frontend/windows/flutter/generated_plugin_registrant.cc
+frontend/windows/flutter/generated_plugins.cmake
 seed/serviceAccountKey.json
 frontend/seed/node_modules/
 frontend/seed/serviceAccountKey*.json*
