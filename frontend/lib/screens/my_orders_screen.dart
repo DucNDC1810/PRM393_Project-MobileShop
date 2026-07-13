@@ -284,9 +284,6 @@ class MyOrdersScreen extends StatelessWidget {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-<<<<<<< HEAD
-                                        builder: (context) => const ChatScreen(),
-=======
                                         builder: (context) => ChatScreen(
                                           orderInfo: {
                                             'orderId': orderId,
@@ -296,7 +293,6 @@ class MyOrdersScreen extends StatelessWidget {
                                             'date': dateStr,
                                           },
                                         ),
->>>>>>> Feature/EditProfile
                                       ),
                                     );
                                   },
