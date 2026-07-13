@@ -157,14 +157,15 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Update user profile (name, phone)
+  /// Update user profile (name, phone, photoUrl)
   Future<bool> updateProfile({
     required String name,
     required String phone,
+    String? photoUrl,
   }) async {
     _errorMessage = null;
     try {
-      await _service.updateProfile(name: name, phone: phone);
+      await _service.updateProfile(name: name, phone: phone, photoUrl: photoUrl);
       // Refresh the user object so UI rebuilds with latest displayName
       _user = _service.currentUser;
       notifyListeners();

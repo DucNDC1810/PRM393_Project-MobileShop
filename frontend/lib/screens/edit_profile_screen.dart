@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
@@ -19,7 +22,79 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   bool _isLoading = false;
   bool _isFetching = true;
+  bool _isUploadingAvatar = false;
   String? _email;
+
+  Future<String?> _uploadAvatar(XFile file) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('users')
+          .child(user.uid)
+          .child('avatar.jpg');
+
+      final bytes = await file.readAsBytes();
+      final uploadTask = storageRef.putData(
+        bytes,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print('Firebase Storage upload failed: $e. Falling back to Base64...');
+      try {
+        final bytes = await file.readAsBytes();
+        final base64String = base64Encode(bytes);
+        return 'data:image/jpeg;base64,$base64String';
+      } catch (err) {
+        print('Base64 fallback failed: $err');
+      }
+      return null;
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    try {
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 256,
+        maxHeight: 256,
+        imageQuality: 75,
+      );
+      if (image == null) return;
+
+      setState(() => _isUploadingAvatar = true);
+
+      final photoUrl = await _uploadAvatar(image);
+      if (photoUrl != null) {
+        final authProvider = context.read<AuthProvider>();
+        final success = await authProvider.updateProfile(
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          photoUrl: photoUrl,
+        );
+        if (success) {
+          _showSuccess('Cập nhật ảnh đại diện thành công!');
+        } else {
+          _showError(authProvider.errorMessage ?? 'Không thể lưu ảnh đại diện.');
+        }
+      } else {
+        _showError('Không thể tải lên hình ảnh.');
+      }
+    } catch (e) {
+      _showError('Đã xảy ra lỗi khi chọn ảnh.');
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -118,6 +193,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -174,27 +250,71 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     Center(
                       child: Stack(
                         children: [
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppColors.primary, AppColors.primaryContainer],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.25),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 6),
+                          GestureDetector(
+                            onTap: _isUploadingAvatar ? null : _pickAndUploadImage,
+                            child: Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [AppColors.primary, AppColors.primaryContainer],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                              ],
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.25),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(50),
+                                child: _isUploadingAvatar
+                                    ? const Center(
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 3,
+                                        ),
+                                      )
+                                    : (user?.photoURL != null && user!.photoURL!.isNotEmpty)
+                                        ? Image.network(
+                                            user.photoURL!,
+                                            fit: BoxFit.cover,
+                                            width: 100,
+                                            height: 100,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return const Center(
+                                                child: Text('👤', style: TextStyle(fontSize: 48)),
+                                              );
+                                            },
+                                          )
+                                        : const Center(
+                                            child: Text('👤', style: TextStyle(fontSize: 48)),
+                                          ),
+                              ),
                             ),
-                            child: const Center(
-                              child: Text('👤', style: TextStyle(fontSize: 48)),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: _isUploadingAvatar ? null : _pickAndUploadImage,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
                             ),
                           ),
                         ],

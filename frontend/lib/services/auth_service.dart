@@ -171,10 +171,11 @@ class AuthService {
     await _auth.sendPasswordResetEmail(email: email.trim());
   }
 
-  /// Update display name and phone in Firestore + Firebase Auth
+  /// Update display name, phone, and optional photoUrl in Firestore + Firebase Auth
   Future<void> updateProfile({
     required String name,
     required String phone,
+    String? photoUrl,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Chưa đăng nhập.');
@@ -182,12 +183,22 @@ class AuthService {
     // Update displayName in Firebase Auth
     await user.updateDisplayName(name);
 
+    // Update photoURL if provided
+    if (photoUrl != null) {
+      await user.updatePhotoURL(photoUrl);
+    }
+
     // Update Firestore document
-    await _db.collection('users').doc(user.uid).set({
+    final Map<String, dynamic> updateData = {
       'name': name,
       'phone': phone,
       'updated_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    };
+    if (photoUrl != null) {
+      updateData['photo_url'] = photoUrl;
+    }
+
+    await _db.collection('users').doc(user.uid).set(updateData, SetOptions(merge: true));
 
     // Reload user to get fresh data
     await user.reload();

@@ -334,8 +334,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3),
                 ),
-                child: const Center(
-                  child: Text('👤', style: TextStyle(fontSize: 44)),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(44),
+                  child: (user?.photoURL != null && user!.photoURL!.isNotEmpty)
+                      ? Image.network(
+                          user.photoURL!,
+                          fit: BoxFit.cover,
+                          width: 88,
+                          height: 88,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Text('👤', style: TextStyle(fontSize: 44)),
+                            );
+                          },
+                        )
+                      : const Center(
+                          child: Text('👤', style: TextStyle(fontSize: 44)),
+                        ),
                 ),
               ),
               // Brand logo badge
