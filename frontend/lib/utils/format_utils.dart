@@ -10,5 +10,5 @@ final _currencyFormatter = NumberFormat.currency(
 String formatPrice(num price) => _currencyFormatter.format(price);
 
 String formatDate(DateTime date) {
-  return DateFormat('dd/MM/yyyy HH:mm', 'vi_VN').format(date);
+  return DateFormat('dd/MM/yyyy HH:mm').format(date);
 }
