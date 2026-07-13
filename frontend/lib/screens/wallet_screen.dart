@@ -110,6 +110,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   onPressed: () async {
@@ -121,7 +122,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     Navigator.pop(context); // Close dialog
                     _handleDeposit(amount);
                   },
-                  child: const Text('Tiếp tục'),
+                  child: const Text('Tiếp tục', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600)),
                 ),
               ],
             );
