@@ -76,6 +76,21 @@ class ProductService {
     }).toList();
   }
 
+  Future<void> createProduct(Map<String, dynamic> data) async {
+    data['created_at'] = FieldValue.serverTimestamp();
+    data['updated_at'] = FieldValue.serverTimestamp();
+    await _db.collection('products').add(data);
+  }
+
+  Future<void> updateProduct(String id, Map<String, dynamic> data) async {
+    data['updated_at'] = FieldValue.serverTimestamp();
+    await _db.collection('products').doc(id).update(data);
+  }
+
+  Future<void> deleteProduct(String id) async {
+    await _db.collection('products').doc(id).delete();
+  }
+
   Future<List<Map<String, dynamic>>> getCategories() async {
     final snap = await _db
         .collection('categories')

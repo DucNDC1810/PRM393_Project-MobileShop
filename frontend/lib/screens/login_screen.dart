@@ -100,7 +100,9 @@ class _LoginScreenState extends State<LoginScreen>
         );
         return;
       }
-      if (widget.onLoginSuccess != null) {
+      if (authProvider.isAdmin) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
+      } else if (widget.onLoginSuccess != null) {
         widget.onLoginSuccess!();
         Navigator.of(context).pop();
       } else {
@@ -124,7 +126,9 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = false);
 
     if (success) {
-      if (widget.onLoginSuccess != null) {
+      if (authProvider.isAdmin) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
+      } else if (widget.onLoginSuccess != null) {
         widget.onLoginSuccess!();
         Navigator.of(context).pop();
       } else {
@@ -148,7 +152,9 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = false);
 
     if (success) {
-      if (widget.onLoginSuccess != null) {
+      if (authProvider.isAdmin) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
+      } else if (widget.onLoginSuccess != null) {
         widget.onLoginSuccess!();
         Navigator.of(context).pop();
       } else {

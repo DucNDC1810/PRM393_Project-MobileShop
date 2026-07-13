@@ -29,13 +29,33 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     Future.delayed(const Duration(milliseconds: 2000), () {
-      if (mounted) {
-        final auth = context.read<AuthProvider>();
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      
+      void navigate() {
         if (auth.isLoggedIn) {
-          Navigator.of(context).pushReplacementNamed('/home');
+          if (auth.isAdmin) {
+            Navigator.of(context).pushReplacementNamed('/admin');
+          } else {
+            Navigator.of(context).pushReplacementNamed('/home');
+          }
         } else {
           Navigator.of(context).pushReplacementNamed('/login');
         }
+      }
+
+      if (auth.status == AuthStatus.initial || auth.status == AuthStatus.loading) {
+        // Wait for it to settle
+        late void Function() listener;
+        listener = () {
+          if (auth.status == AuthStatus.authenticated || auth.status == AuthStatus.unauthenticated) {
+            auth.removeListener(listener);
+            navigate();
+          }
+        };
+        auth.addListener(listener);
+      } else {
+        navigate();
       }
     });
   }
