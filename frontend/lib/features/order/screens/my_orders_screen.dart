@@ -131,6 +131,10 @@ class _OrderCard extends StatelessWidget {
     final items = order['items'] as List? ?? [];
     final total = (order['total'] ?? 0) as num;
     final status = order['status'] as String? ?? 'Chờ xử lý';
+    final paymentMethod = order['payment_method'] as String? ?? '';
+    final orderCode = (order['order_code'] as num?)?.toInt();
+    final checkoutUrl = order['checkout_url'] as String? ?? '';
+    final qrCode = order['qr_code'] as String? ?? '';
     final createdAt = order['created_at'] as Timestamp?;
     final dateStr =
         createdAt != null ? formatDate(createdAt.toDate()) : 'Vừa xong';
@@ -144,7 +148,7 @@ class _OrderCard extends StatelessWidget {
         border: Border.all(color: AppColors.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -170,6 +174,10 @@ class _OrderCard extends StatelessWidget {
             items: items,
             dateStr: dateStr,
             docId: orderDoc.id,
+            paymentMethod: paymentMethod,
+            orderCode: orderCode,
+            checkoutUrl: checkoutUrl,
+            qrCode: qrCode,
           ),
         ],
       ),
@@ -372,13 +380,17 @@ class _ItemThumbnail extends StatelessWidget {
   }
 }
 
-class _OrderFooter extends StatelessWidget {
+class _OrderFooter extends StatefulWidget {
   final String orderId;
   final String status;
   final num total;
   final List items;
   final String dateStr;
   final String docId;
+  final String paymentMethod;
+  final int? orderCode;
+  final String checkoutUrl;
+  final String qrCode;
 
   const _OrderFooter({
     required this.orderId,
@@ -387,10 +399,214 @@ class _OrderFooter extends StatelessWidget {
     required this.items,
     required this.dateStr,
     required this.docId,
+    required this.paymentMethod,
+    required this.orderCode,
+    required this.checkoutUrl,
+    required this.qrCode,
   });
 
   @override
+  State<_OrderFooter> createState() => _OrderFooterState();
+}
+
+class _OrderFooterState extends State<_OrderFooter> {
+  bool _isLoading = false;
+
+  bool get _isBankTransfer =>
+      widget.paymentMethod == 'Thanh toán chuyển khoản';
+
+  Future<void> _resumePayment() async {
+    if (widget.orderCode == null) return;
+
+    // Nếu đã có QR trong Firestore thì dùng luôn, không gọi API
+    if (widget.qrCode.isNotEmpty) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PaymentWaitingScreen(
+            orderCode: widget.orderCode!,
+            firebaseOrderId: widget.orderId,
+            firebaseDocId: widget.docId,
+            checkoutUrl: widget.checkoutUrl,
+            qrCode: widget.qrCode,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Fallback: lấy lại checkoutUrl và qrCode từ PayOS API
+    setState(() => _isLoading = true);
+    try {
+      final info = await PayOSService.getPaymentInfo(widget.orderCode!);
+      final checkoutUrl = info['checkoutUrl'] as String? ?? '';
+      final qrCode = info['qrCode'] as String? ?? '';
+
+      if (qrCode.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Không tìm thấy mã QR cho đơn hàng này.',
+                  style: TextStyle(fontFamily: 'DM Sans')),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Lưu lại vào Firestore để lần sau không cần gọi API
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(widget.docId)
+          .update({'checkout_url': checkoutUrl, 'qr_code': qrCode});
+
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PaymentWaitingScreen(
+            orderCode: widget.orderCode!,
+            firebaseOrderId: widget.orderId,
+            firebaseDocId: widget.docId,
+            checkoutUrl: checkoutUrl,
+            qrCode: qrCode,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể lấy mã QR: $e',
+                style: const TextStyle(fontFamily: 'DM Sans')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _cancelOrder() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hủy đơn hàng',
+            style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
+        content: Text(
+          _isBankTransfer
+              ? 'Bạn có chắc muốn hủy đơn này? Nếu đã thanh toán, tiền sẽ được hoàn vào ví của bạn.'
+              : 'Bạn có chắc muốn hủy đơn hàng này không?',
+          style: const TextStyle(fontFamily: 'DM Sans'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Không', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Hủy đơn',
+                style: TextStyle(
+                    fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    // Lấy user trước khi vào async để tránh context across async gap
+    final user = context.read<AuthProvider>().user;
+    setState(() => _isLoading = true);
+    try {
+      final db = FirebaseFirestore.instance;
+      final orderRef = db.collection('orders').doc(widget.docId);
+
+      // Kiểm tra trạng thái thanh toán PayOS nếu là chuyển khoản
+      bool shouldRefund = false;
+      if (_isBankTransfer && widget.orderCode != null) {
+        try {
+          final payosStatus =
+              await PayOSService.getPaymentStatus(widget.orderCode!);
+          shouldRefund = payosStatus == 'PAID';
+        } catch (_) {
+          // Nếu không kiểm tra được thì không hoàn tiền tự động
+        }
+      }
+
+      if (shouldRefund && user != null) {
+        // Hoàn tiền vào ví qua Firestore transaction
+        final userRef = db.collection('users').doc(user.uid);
+        await db.runTransaction((txn) async {
+          final userSnap = await txn.get(userRef);
+          final currentBalance =
+              (userSnap.data()?['wallet_balance'] as num? ?? 0).toDouble();
+          final refundAmount = widget.total.toDouble();
+          txn.update(userRef, {'wallet_balance': currentBalance + refundAmount});
+          txn.update(orderRef, {'status': 'Đã hủy'});
+          txn.set(
+            db.collection('wallet_transactions').doc(),
+            {
+              'user_id': user.uid,
+              'user_email': user.email,
+              'type': 'refund',
+              'amount': refundAmount,
+              'description': 'Hoàn tiền đơn hàng #${widget.orderId}',
+              'order_id': widget.docId,
+              'created_at': FieldValue.serverTimestamp(),
+            },
+          );
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Đã hủy đơn và hoàn ${formatPrice(widget.total)} vào ví của bạn.',
+                style: const TextStyle(fontFamily: 'DM Sans'),
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        await orderRef.update({'status': 'Đã hủy'});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đơn hàng đã được hủy.',
+                  style: TextStyle(fontFamily: 'DM Sans')),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Có lỗi xảy ra, vui lòng thử lại.',
+                style: TextStyle(fontFamily: 'DM Sans')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final status = widget.status;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -398,7 +614,7 @@ class _OrderFooter extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Tổng cộng (${items.length} món):',
+              'Tổng cộng (${widget.items.length} món):',
               style: const TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 13,
@@ -406,7 +622,7 @@ class _OrderFooter extends StatelessWidget {
               ),
             ),
             Text(
-              formatPrice(total),
+              formatPrice(widget.total),
               style: const TextStyle(
                 fontFamily: 'DM Sans',
                 fontSize: 16,
@@ -426,11 +642,11 @@ class _OrderFooter extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => ChatScreen(
                       orderInfo: {
-                        'orderId': orderId,
+                        'orderId': widget.orderId,
                         'status': status,
-                        'total': total,
-                        'items': items,
-                        'date': dateStr,
+                        'total': widget.total,
+                        'items': widget.items,
+                        'date': widget.dateStr,
                       },
                     ),
                   ),
@@ -451,11 +667,61 @@ class _OrderFooter extends StatelessWidget {
                 ),
               ),
             ),
-            if (status == 'Hoàn thành') ...[
+            if (status == 'Đang thanh toán' && _isBankTransfer) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _resumePayment,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text(
+                          'Thanh toán',
+                          style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _isLoading ? null : _cancelOrder,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  child: const Text(
+                    'Hủy đơn',
+                    style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ] else if (status == 'Hoàn thành') ...[
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => showReviewSheet(context, docId, items),
+                  onPressed: () =>
+                      showReviewSheet(context, widget.docId, widget.items),
                   icon: const Icon(Icons.star_outline, size: 16),
                   label: const Text(
                     'Đánh giá',
@@ -479,7 +745,8 @@ class _OrderFooter extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _confirmReceived(context, docId),
+                  onPressed: () =>
+                      _confirmReceived(context, widget.docId),
                   icon: const Icon(Icons.check_circle_outline, size: 16),
                   label: const Text(
                     'Đã nhận hàng',
@@ -502,8 +769,8 @@ class _OrderFooter extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () =>
-                      _showTrackingDialog(context, status, orderId, dateStr),
+                  onPressed: () => _showTrackingDialog(
+                      context, status, widget.orderId, widget.dateStr),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,

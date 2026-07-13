@@ -361,6 +361,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }).toList();
 
       final orderId = _generateOrderId();
+      final int orderCode = DateTime.now().millisecondsSinceEpoch;
 
       final docRef = await FirebaseFirestore.instance.collection('orders').add({
         'order_id': orderId,
@@ -374,8 +375,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           'notes': _notesCtrl.text.trim(),
         },
         'shipping_method': _shippingMethod == 'standard' ? 'Giao hàng tiêu chuẩn' : 'Giao hàng nhanh',
-        'payment_method': _paymentMethod == 'cod' 
-            ? 'Thanh toán khi nhận hàng' 
+        'payment_method': _paymentMethod == 'cod'
+            ? 'Thanh toán khi nhận hàng'
             : (_paymentMethod == 'payos' ? 'Thanh toán chuyển khoản' : 'Thanh toán bằng số dư ví'),
         'items': itemsData,
         'subtotal': subtotal,
@@ -383,6 +384,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'shipping_fee': shippingFee,
         'total': total,
         'status': _paymentMethod == 'payos' ? 'Đang thanh toán' : 'Chờ xử lý',
+        'order_code': _paymentMethod == 'payos' ? orderCode : null,
         'created_at': FieldValue.serverTimestamp(),
       });
 
@@ -399,8 +401,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       cart.clear();
 
       if (_paymentMethod == 'payos') {
-        // Tạo orderCode ngẫu nhiên (dưới 53 bit)
-        final int orderCode = DateTime.now().millisecondsSinceEpoch;
         
         final payosData = await PayOSService.createPaymentLink(
           orderCode: orderCode,
@@ -408,9 +408,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           description: 'Thanh toan don hang',
         );
 
-        final checkoutUrl = payosData['checkoutUrl'];
-        final qrCode = payosData['qrCode'];
-        
+        final checkoutUrl = payosData['checkoutUrl'] as String? ?? '';
+        final qrCode = payosData['qrCode'] as String? ?? '';
+
+        // Lưu lại checkoutUrl và qrCode để có thể resume sau
+        await docRef.update({
+          'checkout_url': checkoutUrl,
+          'qr_code': qrCode,
+        });
+
         // Tắt loading
         if (mounted) Navigator.of(context).pop();
 
