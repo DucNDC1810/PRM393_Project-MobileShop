@@ -3,17 +3,17 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
-import 'firebase_options.dart';
-import 'providers/auth_provider.dart';
-import 'providers/product_provider.dart';
-import 'providers/cart_provider.dart';
-import 'providers/favorites_provider.dart';
-import 'screens/admin/admin_dashboard_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_shell.dart';
-import 'screens/splash_screen.dart';
-import 'services/product_service.dart';
-import 'theme/app_theme.dart';
+import 'package:project_mobileshop/firebase_options.dart';
+import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
+import 'package:project_mobileshop/features/product/providers/product_provider.dart';
+import 'package:project_mobileshop/features/cart/providers/cart_provider.dart';
+import 'package:project_mobileshop/features/product/providers/favorites_provider.dart';
+import 'package:project_mobileshop/features/admin/screens/admin_dashboard_screen.dart';
+import 'package:project_mobileshop/features/auth/screens/login_screen.dart';
+import 'package:project_mobileshop/features/home/screens/main_shell.dart';
+import 'package:project_mobileshop/features/home/screens/splash_screen.dart';
+import 'package:project_mobileshop/features/product/services/product_service.dart';
+import 'package:project_mobileshop/core/theme/app_theme.dart';
 
 import 'package:google_sign_in/google_sign_in.dart';
 
