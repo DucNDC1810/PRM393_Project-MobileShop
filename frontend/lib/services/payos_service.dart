@@ -54,8 +54,8 @@ class PayOSService {
     }
   }
 
-  // Kiểm tra trạng thái thanh toán của đơn hàng
-  static Future<String> getPaymentStatus(int orderCode) async {
+  // Lấy thông tin đầy đủ của payment link (checkoutUrl, qrCode, status...)
+  static Future<Map<String, dynamic>> getPaymentInfo(int orderCode) async {
     final url = Uri.parse('$_baseUrl/v2/payment-requests/$orderCode');
     final response = await http.get(
       url,
@@ -69,12 +69,18 @@ class PayOSService {
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
       if (json['code'] == '00') {
-        return json['data']['status']; // PENDING, PAID, CANCELLED
+        return json['data'] as Map<String, dynamic>;
       } else {
         throw Exception(json['desc'] ?? 'Lỗi từ PayOS');
       }
     } else {
-      throw Exception('Lỗi gọi API kiểm tra trạng thái: ${response.statusCode}');
+      throw Exception('Lỗi gọi API PayOS: ${response.statusCode}');
     }
+  }
+
+  // Kiểm tra trạng thái thanh toán của đơn hàng
+  static Future<String> getPaymentStatus(int orderCode) async {
+    final data = await getPaymentInfo(orderCode);
+    return data['status'] as String? ?? 'PENDING';
   }
 }
