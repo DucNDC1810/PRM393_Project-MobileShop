@@ -32,7 +32,6 @@ class MyReviewsScreen extends StatelessWidget {
               stream: FirebaseFirestore.instance
                   .collection('reviews')
                   .where('user_email', isEqualTo: user.email)
-                  .orderBy('created_at', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
