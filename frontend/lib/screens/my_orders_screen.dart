@@ -314,7 +314,7 @@ class MyOrdersScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              if (status == 'Đang giao') ...[
+                              if (status.toLowerCase().contains('giao') && status.toLowerCase() != 'hoàn thành') ...[
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: ElevatedButton.icon(
@@ -330,6 +330,24 @@ class MyOrdersScreen extends StatelessWidget {
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                       padding: const EdgeInsets.symmetric(vertical: 10),
                                       elevation: 0,
+                                    ),
+                                  ),
+                                ),
+                              ] else if (status.toLowerCase() != 'hoàn thành') ...[
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () {},
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      elevation: 0,
+                                    ),
+                                    child: const Text(
+                                      'Theo dõi đơn',
+                                      style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ),
