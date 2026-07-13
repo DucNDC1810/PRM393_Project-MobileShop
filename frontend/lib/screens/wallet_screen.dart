@@ -174,6 +174,184 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
+  void _showWithdrawDialog() {
+    final amountCtrl = TextEditingController();
+    final accountNumberCtrl = TextEditingController();
+    final accountNameCtrl = TextEditingController();
+    String? selectedBankBin;
+
+    final banks = [
+      {'name': 'MB Bank', 'bin': '970422'},
+      {'name': 'Techcombank', 'bin': '970407'},
+      {'name': 'Vietcombank (VCB)', 'bin': '970436'},
+      {'name': 'VietinBank', 'bin': '970415'},
+      {'name': 'BIDV', 'bin': '970418'},
+      {'name': 'Agribank', 'bin': '970405'},
+      {'name': 'ACB', 'bin': '970416'},
+      {'name': 'TPBank', 'bin': '970423'},
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Rút tiền', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold, fontSize: 18)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: amountCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Số tiền (Tối thiểu 10.000đ)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: 'Ngân hàng',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      value: selectedBankBin,
+                      items: banks.map((b) {
+                        return DropdownMenuItem<String>(
+                          value: b['bin'],
+                          child: Text(b['name']!, style: const TextStyle(fontFamily: 'DM Sans', fontSize: 14)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          selectedBankBin = val;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: accountNumberCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Số tài khoản',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: accountNameCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        labelText: 'Tên chủ tài khoản',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    final amount = int.tryParse(amountCtrl.text.trim()) ?? 0;
+                    final accountNumber = accountNumberCtrl.text.trim();
+                    final accountName = accountNameCtrl.text.trim().toUpperCase();
+
+                    if (amount < 10000) {
+                      CustomToast.showError(context, 'Số tiền rút tối thiểu là 10.000đ!');
+                      return;
+                    }
+                    if (amount > _balance) {
+                      CustomToast.showError(context, 'Số dư không đủ!');
+                      return;
+                    }
+                    if (selectedBankBin == null || accountNumber.isEmpty || accountName.isEmpty) {
+                      CustomToast.showError(context, 'Vui lòng điền đầy đủ thông tin!');
+                      return;
+                    }
+
+                    Navigator.pop(context); // Close dialog
+                    _handleWithdraw(amount, selectedBankBin!, accountNumber, accountName);
+                  },
+                  child: const Text('Rút tiền', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600)),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+
+  Future<void> _handleWithdraw(int amount, String bankCode, String accountNumber, String accountName) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+    );
+
+    try {
+      // 1. Gọi API rút tiền của PayOS
+      await PayOSService.createPayout(
+        amount: amount,
+        bankCode: bankCode,
+        accountNumber: accountNumber,
+        accountName: accountName,
+        description: 'Rut tien tu vi',
+      );
+
+      // 2. Nếu thành công, trừ tiền trong Firebase
+      final auth = context.read<AuthProvider>();
+      if (auth.user == null) throw Exception("Chưa đăng nhập");
+
+      final userRef = FirebaseFirestore.instance.collection('users').doc(auth.user!.uid);
+      
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(userRef);
+        final currentBalance = snapshot.data()?['wallet_balance'] ?? 0;
+
+        if (currentBalance < amount) {
+          throw Exception("Số dư không đủ để thực hiện giao dịch.");
+        }
+
+        // Cập nhật số dư
+        transaction.update(userRef, {'wallet_balance': currentBalance - amount});
+
+        // Thêm lịch sử giao dịch
+        final txRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
+        transaction.set(txRef, {
+          'user_uid': auth.user!.uid,
+          'type': 'withdraw',
+          'amount': amount,
+          'created_at': FieldValue.serverTimestamp(),
+          'bank_code': bankCode,
+          'account_number': accountNumber,
+          'account_name': accountName,
+          'status': 'success',
+        });
+      });
+
+      if (mounted) Navigator.of(context).pop(); // dismiss loading
+      if (mounted) CustomToast.showSuccess(context, 'Rút tiền thành công!');
+      
+      _fetchBalance();
+
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) CustomToast.showError(context, 'Lỗi rút tiền: $e');
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -236,6 +414,15 @@ class _WalletScreenState extends State<WalletScreen> {
                         label: 'Nạp tiền',
                         color: Colors.green.shade600,
                         onTap: _showDepositDialog,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.account_balance_wallet_outlined,
+                        label: 'Rút tiền',
+                        color: Colors.orange.shade600,
+                        onTap: _showWithdrawDialog,
                       ),
                     ),
                   ],
@@ -308,6 +495,11 @@ class _WalletScreenState extends State<WalletScreen> {
                             title = 'Thanh toán đơn hàng ${orderId.toString().isNotEmpty ? "#$orderId" : ""}';
                             icon = Icons.shopping_bag_outlined;
                             color = Colors.red;
+                            sign = '-';
+                          } else if (type == 'withdraw') {
+                            title = 'Rút tiền về ngân hàng';
+                            icon = Icons.account_balance_wallet_outlined;
+                            color = Colors.orange;
                             sign = '-';
                           }
 

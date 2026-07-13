@@ -83,4 +83,57 @@ class PayOSService {
     final data = await getPaymentInfo(orderCode);
     return data['status'] as String? ?? 'PENDING';
   }
+
+  // Tạo lệnh rút tiền (Chi hộ / Payout)
+  static Future<Map<String, dynamic>> createPayout({
+    required int amount,
+    required String bankCode, // BIN của ngân hàng
+    required String accountNumber,
+    required String accountName,
+    required String description,
+  }) async {
+    final String referenceId = "REF${DateTime.now().millisecondsSinceEpoch}";
+
+    // 3. Payload (Các field bắt buộc: amount, description, referenceId, toAccountName, toAccountNumber, toBin)
+    final body = {
+      "amount": amount,
+      "description": description,
+      "referenceId": referenceId,
+      "toAccountName": accountName,
+      "toAccountNumber": accountNumber,
+      "toBin": bankCode,
+    };
+
+    // 1. Dữ liệu để tạo chữ ký (Phải là query string key=value, sắp xếp alphabet)
+    final String dataStr = 'amount=$amount&description=$description&referenceId=$referenceId&toAccountName=$accountName&toAccountNumber=$accountNumber&toBin=$bankCode';
+
+    // 2. Tính chữ ký bằng payoutChecksumKey
+    final hmac = Hmac(sha256, utf8.encode(PayOSConfig.payoutChecksumKey));
+    final signature = hmac.convert(utf8.encode(dataStr)).toString();
+
+    // 4. Gọi API Payout
+    final url = Uri.parse('$_baseUrl/v1/payouts');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-client-id': PayOSConfig.payoutClientId,
+        'x-api-key': PayOSConfig.payoutApiKey,
+        'x-idempotency-key': DateTime.now().millisecondsSinceEpoch.toString(), // Yêu cầu bắt buộc của PayOS Payout
+        'x-signature': signature, // Chữ ký bảo mật phải đưa vào Header chứ không phải Body
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      if (json['code'] == '00') {
+        return json['data'] ?? {};
+      } else {
+        throw Exception('${json['desc']} - Chi tiết: ${response.body}');
+      }
+    } else {
+      throw Exception('Lỗi gọi API Payout PayOS: ${response.statusCode}\n${response.body}');
+    }
+  }
 }
