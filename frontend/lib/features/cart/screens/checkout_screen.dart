@@ -9,6 +9,7 @@ import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/core/widgets/custom_toast.dart';
 import 'package:project_mobileshop/features/order/screens/order_success_screen.dart';
 import 'package:project_mobileshop/features/order/screens/payment_waiting_screen.dart';
+import 'package:project_mobileshop/features/notification/services/notification_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final int discount;
@@ -387,6 +388,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'order_code': _paymentMethod == 'payos' ? orderCode : null,
         'created_at': FieldValue.serverTimestamp(),
       });
+
+      // Gửi thông báo đặt hàng thành công
+      if (user != null) {
+        final short = orderId.length > 8 ? orderId.substring(0, 8) : orderId;
+        await NotificationService.push(
+          userUid: user.uid,
+          title: 'Đặt hàng thành công 🎉',
+          body: 'Đơn hàng #$short của bạn đã được tiếp nhận và đang chờ xác nhận.',
+          type: 'order',
+          extra: {'order_id': orderId},
+        );
+      }
 
       if (!addressExists && user != null) {
         _savedAddresses.insert(0, newAddress);
