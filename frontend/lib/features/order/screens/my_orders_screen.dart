@@ -417,6 +417,9 @@ class _OrderFooterState extends State<_OrderFooter> {
   bool get _isBankTransfer =>
       widget.paymentMethod == 'Thanh toán chuyển khoản';
 
+  bool get _isWalletPayment =>
+      widget.paymentMethod == 'Thanh toán bằng số dư ví';
+
   Future<void> _resumePayment() async {
     if (widget.orderCode == null) return;
 
@@ -497,8 +500,8 @@ class _OrderFooterState extends State<_OrderFooter> {
         title: const Text('Hủy đơn hàng',
             style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
         content: Text(
-          _isBankTransfer
-              ? 'Bạn có chắc muốn hủy đơn này? Nếu đã thanh toán, tiền sẽ được hoàn vào ví của bạn.'
+          (_isBankTransfer || _isWalletPayment)
+              ? 'Bạn có chắc muốn hủy đơn này? Tiền sẽ được hoàn lại vào ví của bạn.'
               : 'Bạn có chắc muốn hủy đơn hàng này không?',
           style: const TextStyle(fontFamily: 'DM Sans'),
         ),
@@ -533,32 +536,37 @@ class _OrderFooterState extends State<_OrderFooter> {
       final db = FirebaseFirestore.instance;
       final orderRef = db.collection('orders').doc(widget.docId);
 
-      // Kiểm tra trạng thái thanh toán PayOS nếu là chuyển khoản
+      // Xác định có hoàn tiền không
       bool shouldRefund = false;
-      if (_isBankTransfer && widget.orderCode != null) {
+
+      if (_isWalletPayment) {
+        // Thanh toán bằng ví → luôn hoàn tiền khi hủy
+        shouldRefund = true;
+      } else if (_isBankTransfer && widget.orderCode != null) {
+        // Chuyển khoản PayOS → kiểm tra trạng thái thanh toán
         try {
           final payosStatus =
               await PayOSService.getPaymentStatus(widget.orderCode!);
           shouldRefund = payosStatus == 'PAID';
         } catch (_) {
-          // Nếu không kiểm tra được thì không hoàn tiền tự động
+          // Không kiểm tra được → không hoàn tiền tự động
         }
       }
 
       if (shouldRefund && user != null) {
-        // Hoàn tiền vào ví qua Firestore transaction
         final userRef = db.collection('users').doc(user.uid);
         await db.runTransaction((txn) async {
           final userSnap = await txn.get(userRef);
           final currentBalance =
-              (userSnap.data()?['wallet_balance'] as num? ?? 0).toDouble();
-          final refundAmount = widget.total.toDouble();
-          txn.update(userRef, {'wallet_balance': currentBalance + refundAmount});
+              (userSnap.data()?['wallet_balance'] as num? ?? 0).toInt();
+          final refundAmount = widget.total.toInt();
+          txn.update(userRef,
+              {'wallet_balance': currentBalance + refundAmount});
           txn.update(orderRef, {'status': 'Đã hủy'});
           txn.set(
             db.collection('wallet_transactions').doc(),
             {
-              'user_id': user.uid,
+              'user_uid': user.uid,
               'user_email': user.email,
               'type': 'refund',
               'amount': refundAmount,
