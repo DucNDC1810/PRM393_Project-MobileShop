@@ -228,6 +228,12 @@ class _InventoryTab extends StatelessWidget {
                                       width: 70,
                                       height: 70,
                                       fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        width: 70,
+                                        height: 70,
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                                      ),
                                     )
                                   : Container(
                                       width: 70,
