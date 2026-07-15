@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
+import 'package:project_mobileshop/features/profile/services/profile_service.dart';
 import 'package:project_mobileshop/features/product/providers/favorites_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/core/widgets/shop_logo.dart';
@@ -33,8 +33,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Số liệu tháng hiện tại (để xét duy trì)
   int _monthlyOrderCount = 0;
   double _monthlySpent = 0;
-  // Chu kỳ 6 tháng hiện tại (để hiển thị ngày reset)
-  DateTime _periodStart = DateTime.now();
   DateTime _periodEnd = DateTime.now();
 
   @override
@@ -45,56 +43,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _fetchStats(String uid) async {
-    try {
-      final now = DateTime.now();
-
-      // Xác định chu kỳ 6 tháng hiện tại (Jan-Jun hoặc Jul-Dec)
-      final isFirstHalf = now.month <= 6;
-      final periodStart = DateTime(now.year, isFirstHalf ? 1 : 7, 1);
-      final periodEnd = DateTime(now.year, isFirstHalf ? 7 : 13, 1);
-
-      final snap = await FirebaseFirestore.instance
-          .collection('orders')
-          .where('user_uid', isEqualTo: uid)
-          .get();
-
-      double periodTotal = 0;
-      int periodCount = 0;
-      double monthlyTotal = 0;
-      int monthlyCount = 0;
-
-      for (final doc in snap.docs) {
-        final amount = (doc.data()['total'] ?? 0) as num;
-        final createdAt = doc.data()['created_at'];
-        if (createdAt == null) continue;
-
-        final date = (createdAt as Timestamp).toDate();
-
-        // Đơn trong chu kỳ 6 tháng hiện tại → xét rank
-        if (!date.isBefore(periodStart) && date.isBefore(periodEnd)) {
-          periodTotal += amount.toDouble();
-          periodCount++;
-        }
-
-        // Đơn trong tháng hiện tại → xét duy trì
-        if (date.year == now.year && date.month == now.month) {
-          monthlyTotal += amount.toDouble();
-          monthlyCount++;
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _orderCount = periodCount;
-          _totalSpent = periodTotal;
-          _monthlyOrderCount = monthlyCount;
-          _monthlySpent = monthlyTotal;
-          _periodStart = periodStart;
-          _periodEnd = DateTime(periodEnd.year, periodEnd.month - 1, 30);
-        });
-      }
-    } catch (e) {
-      debugPrint('Failed to fetch profile stats: $e');
+    final stats = await ProfileService.fetchOrderStats(uid);
+    if (mounted) {
+      setState(() {
+        _orderCount = stats.periodOrderCount;
+        _totalSpent = stats.periodTotalSpent;
+        _monthlyOrderCount = stats.monthlyOrderCount;
+        _monthlySpent = stats.monthlyTotalSpent;
+        _periodEnd = stats.periodEnd;
+      });
     }
   }
 

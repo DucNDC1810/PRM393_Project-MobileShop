@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project_mobileshop/core/utils/format_utils.dart';
+import 'package:project_mobileshop/core/widgets/order_summary_row.dart';
 import 'package:project_mobileshop/core/widgets/product_image.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
@@ -439,9 +440,9 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          _summaryRow('Tạm tính', subtotal),
-          if (_couponApplied) _summaryRow('Giảm giá (10%)', -discount, isDiscount: true),
-          _summaryRow('Vận chuyển', shipping, isFree: shipping == 0),
+          OrderSummaryRow('Tạm tính', subtotal),
+          if (_couponApplied) OrderSummaryRow('Giảm giá (10%)', -discount, isDiscount: true),
+          OrderSummaryRow('Vận chuyển', shipping, isFree: shipping == 0),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
             child: Divider(color: AppColors.outlineVariant),
@@ -469,45 +470,6 @@ class _CartScreenState extends State<CartScreen> {
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryRow(String label, int amount,
-      {bool isDiscount = false, bool isFree = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.onSurfaceVariant,
-              fontFamily: 'DM Sans',
-            ),
-          ),
-          isFree
-              ? const Text(
-                  'Miễn phí',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.success,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'DM Sans',
-                  ),
-                )
-              : Text(
-                  '${isDiscount ? '-' : ''}${formatVnd(amount.abs())}đ',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: isDiscount ? AppColors.success : AppColors.onSurface,
-                    fontFamily: 'DM Sans',
-                  ),
-                ),
         ],
       ),
     );

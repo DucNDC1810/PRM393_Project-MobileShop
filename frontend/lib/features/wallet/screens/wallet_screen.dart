@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
 import 'package:project_mobileshop/features/wallet/services/payos_service.dart';
+import 'package:project_mobileshop/features/wallet/services/wallet_service.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/core/widgets/custom_toast.dart';
 import 'package:project_mobileshop/features/order/screens/deposit_waiting_screen.dart';
@@ -30,20 +31,18 @@ class _WalletScreenState extends State<WalletScreen> {
   Future<void> _fetchBalance() async {
     final auth = context.read<AuthProvider>();
     if (auth.user == null) return;
-    
+
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(auth.user!.uid).get();
+      final balance = await WalletService.getBalance(auth.user!.uid);
       if (mounted) {
         setState(() {
-          _balance = doc.data()?['wallet_balance'] ?? 0;
+          _balance = balance;
           _isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('Failed to fetch wallet balance: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -180,17 +179,9 @@ class _WalletScreenState extends State<WalletScreen> {
     final auth = context.read<AuthProvider>();
     if (auth.user == null) return;
 
-    // Load saved bank accounts
     List<Map<String, dynamic>> savedAccounts = [];
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(auth.user!.uid)
-          .get();
-      final raw = doc.data()?['bank_accounts'];
-      if (raw is List) {
-        savedAccounts = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      }
+      savedAccounts = await WalletService.getBankAccounts(auth.user!.uid);
     } catch (e) {
       debugPrint('Failed to load bank accounts: $e');
     }
@@ -244,7 +235,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
 
     try {
-      // 1. Gọi API rút tiền của PayOS
       await PayOSService.createPayout(
         amount: amount,
         bankCode: bankCode,
@@ -253,35 +243,11 @@ class _WalletScreenState extends State<WalletScreen> {
         description: 'RutTienViBeautyGlow',
       );
 
-      // 2. Nếu thành công, trừ tiền trong Firebase
       final auth = context.read<AuthProvider>();
-      if (auth.user == null) throw Exception("Chưa đăng nhập");
+      if (auth.user == null) throw Exception('Chưa đăng nhập');
 
-      final userRef = FirebaseFirestore.instance.collection('users').doc(auth.user!.uid);
-      
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        final snapshot = await transaction.get(userRef);
-        final currentBalance = snapshot.data()?['wallet_balance'] ?? 0;
-
-        if (currentBalance < amount) {
-          throw Exception("Số dư không đủ để thực hiện giao dịch.");
-        }
-
-        transaction.update(userRef, {'wallet_balance': currentBalance - amount});
-
-        // Thêm lịch sử giao dịch
-        final txRef = FirebaseFirestore.instance.collection('wallet_transactions').doc();
-        transaction.set(txRef, {
-          'user_uid': auth.user!.uid,
-          'type': 'withdraw',
-          'amount': amount,
-          'created_at': FieldValue.serverTimestamp(),
-          'bank_code': bankCode,
-          'account_number': accountNumber,
-          'account_name': accountName,
-          'status': 'success',
-        });
-      });
+      await WalletService.deductBalance(
+          auth.user!.uid, amount, bankCode, accountNumber, accountName);
 
       if (mounted) Navigator.of(context).pop(); // dismiss loading
       if (mounted) CustomToast.showSuccess(context, 'Rút tiền thành công!');
@@ -379,10 +345,8 @@ class _WalletScreenState extends State<WalletScreen> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('wallet_transactions')
-                        .where('user_uid', isEqualTo: context.read<AuthProvider>().user?.uid)
-                        .snapshots(),
+                    stream: WalletService.transactionsStream(
+                        context.read<AuthProvider>().user?.uid ?? ''),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator(color: AppColors.primary));
@@ -828,24 +792,12 @@ class _BankAccountPickerSheetState extends State<_BankAccountPickerSheet> {
                       );
                       return;
                     }
-                    // Lưu vào Firestore
                     try {
-                      final doc = await FirebaseFirestore.instance
-                          .collection('users').doc(widget.userUid).get();
-                      final existing = (doc.data()?['bank_accounts'] as List? ?? [])
-                          .map((e) => Map<String, dynamic>.from(e as Map)).toList();
-                      final alreadyExists = existing.any((a) =>
-                          a['account_number'] == number && a['bank_bin'] == _selectedBankBin);
-                      if (!alreadyExists) {
-                        existing.add({
-                          'bank_bin': _selectedBankBin,
-                          'account_number': number,
-                          'account_name': name,
-                        });
-                        await FirebaseFirestore.instance
-                            .collection('users').doc(widget.userUid)
-                            .update({'bank_accounts': existing});
-                      }
+                      await WalletService.saveBankAccount(widget.userUid, {
+                        'bank_bin': _selectedBankBin,
+                        'account_number': number,
+                        'account_name': name,
+                      });
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
