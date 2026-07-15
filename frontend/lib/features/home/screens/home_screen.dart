@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
+import 'package:project_mobileshop/features/notification/screens/notification_screen.dart';
 import 'package:project_mobileshop/features/product/providers/product_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/features/product/widgets/product_card.dart';
@@ -86,6 +89,62 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildNotificationButton() {
+    final uid = context.read<AuthProvider>().user?.uid;
+    if (uid == null) {
+      return IconButton(
+        icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+        onPressed: () {},
+      );
+    }
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('user_uid', isEqualTo: uid)
+          .where('is_read', isEqualTo: false)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final count = snapshot.data?.docs.length ?? 0;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                );
+              },
+            ),
+            if (count > 0)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    count > 99 ? '99+' : '$count',
+                    style: const TextStyle(
+                      fontFamily: 'DM Sans',
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       floating: true,
@@ -115,10 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: const Icon(Icons.search, color: AppColors.primary),
           onPressed: () {},
         ),
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
-          onPressed: () {},
-        ),
+        _buildNotificationButton(),
         const SizedBox(width: 4),
       ],
       bottom: PreferredSize(

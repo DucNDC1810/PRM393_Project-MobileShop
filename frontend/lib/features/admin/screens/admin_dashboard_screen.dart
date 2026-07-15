@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
+import 'package:project_mobileshop/features/notification/services/notification_service.dart';
 import 'package:project_mobileshop/features/product/providers/product_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/features/admin/screens/admin_chat_detail_screen.dart';
@@ -358,10 +359,25 @@ class _OrdersTab extends StatelessWidget {
     if (selected == null || selected == currentStatus || !context.mounted) return;
 
     try {
-      await FirebaseFirestore.instance.collection('orders').doc(docId).update({
+      final orderRef = FirebaseFirestore.instance.collection('orders').doc(docId);
+      final orderDoc = await orderRef.get();
+      final userUid = orderDoc.data()?['user_uid'] as String?;
+
+      await orderRef.update({
         'status': selected,
         'updated_at': FieldValue.serverTimestamp(),
       });
+
+      if (userUid != null) {
+        await NotificationService.push(
+          userUid: userUid,
+          title: NotificationService.orderStatusTitle(selected),
+          body: NotificationService.orderStatusBody(selected, docId),
+          type: 'order',
+          extra: {'order_id': docId},
+        );
+      }
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Đã cập nhật: $selected'), backgroundColor: Colors.green),
@@ -549,10 +565,23 @@ class _OrdersTab extends StatelessWidget {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: () async {
-                                    await FirebaseFirestore.instance.collection('orders').doc(doc.id).update({
-                                      'status': 'Đang giao',
+                                    const newStatus = 'Đang giao';
+                                    final orderRef = FirebaseFirestore.instance.collection('orders').doc(doc.id);
+                                    final orderDoc = await orderRef.get();
+                                    final userUid = orderDoc.data()?['user_uid'] as String?;
+                                    await orderRef.update({
+                                      'status': newStatus,
                                       'updated_at': FieldValue.serverTimestamp(),
                                     });
+                                    if (userUid != null) {
+                                      await NotificationService.push(
+                                        userUid: userUid,
+                                        title: NotificationService.orderStatusTitle(newStatus),
+                                        body: NotificationService.orderStatusBody(newStatus, doc.id),
+                                        type: 'order',
+                                        extra: {'order_id': doc.id},
+                                      );
+                                    }
                                     if (context.mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(content: Text('Đã chuyển sang Đang giao'), backgroundColor: Colors.orange),
