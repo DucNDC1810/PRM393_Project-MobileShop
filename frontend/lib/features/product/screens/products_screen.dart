@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:project_mobileshop/features/product/models/product.dart';
 import 'package:project_mobileshop/features/product/providers/product_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/features/product/widgets/product_card.dart';
@@ -125,14 +126,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  List<Map<String, dynamic>> _filterProducts(List<Map<String, dynamic>> products) {
+  List<Product> _filterProducts(List<Product> products) {
     if (_searchQuery.isEmpty) return products;
 
     final query = _searchQuery.toLowerCase();
-    return products.where((product) {
-      final name = (product['name'] ?? '').toString().toLowerCase();
-      final brand = (product['brand'] ?? '').toString().toLowerCase();
-      return name.contains(query) || brand.contains(query);
+    return products.where((p) {
+      return p.name.toLowerCase().contains(query) || p.brand.toLowerCase().contains(query);
     }).toList();
   }
 

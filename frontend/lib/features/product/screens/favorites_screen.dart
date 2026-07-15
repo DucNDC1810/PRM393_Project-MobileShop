@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:project_mobileshop/features/product/models/product.dart';
 import 'package:project_mobileshop/features/product/providers/favorites_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/features/product/widgets/product_card.dart';
@@ -60,7 +61,7 @@ class FavoritesScreen extends StatelessWidget {
                         childAspectRatio: 0.60,
                       ),
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) => ProductCard(product: items[index]),
+                        (context, index) => ProductCard(product: Product.fromMap(items[index])),
                         childCount: items.length,
                       ),
                     ),

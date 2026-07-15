@@ -601,7 +601,8 @@ class _LoginScreenState extends State<LoginScreen>
           prefix: Icons.person_outline_rounded,
         ),
         validator: (v) {
-          if (v == null || v.isEmpty) return 'Vui lòng nhập email hoặc tên người dùng';
+          if (v == null || v.isEmpty) return 'Vui lòng nhập email';
+          if (!v.contains('@') || !v.contains('.')) return 'Email không hợp lệ';
           return null;
         },
       );

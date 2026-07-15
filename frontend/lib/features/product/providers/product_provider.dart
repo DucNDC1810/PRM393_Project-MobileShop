@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:project_mobileshop/features/product/models/product.dart';
 import 'package:project_mobileshop/features/product/services/product_service.dart';
 
 enum LoadStatus { initial, loading, success, error }
@@ -7,13 +8,12 @@ enum LoadStatus { initial, loading, success, error }
 class ProductProvider extends ChangeNotifier {
   final ProductService _service = ProductService();
 
-  List<Map<String, dynamic>> _products = [];
+  List<Product> _products = [];
   List<Map<String, dynamic>> _categories = [];
   LoadStatus _status = LoadStatus.initial;
   String? _error;
   String? _selectedCategory;
 
-  // New local filter states
   String? _selectedBrand;
   String? _selectedPriceRange; // 'under_500k', '500k_1m', 'over_1m'
   String? _sortBy; // 'price_asc', 'price_desc'
@@ -27,58 +27,37 @@ class ProductProvider extends ChangeNotifier {
   String? get sortBy => _sortBy;
   bool get isLoading => _status == LoadStatus.loading;
 
-  // Extract all unique brands from currently loaded products list
   List<String> get availableBrands {
-    final Set<String> brands = {};
-    for (final p in _products) {
-      final b = p['brand']?.toString();
-      if (b != null && b.trim().isNotEmpty) {
-        brands.add(b.trim());
-      }
-    }
-    final sortedBrands = brands.toList();
-    sortedBrands.sort((a, b) => a.compareTo(b));
-    return sortedBrands;
+    final brands = _products.map((p) => p.brand.trim()).where((b) => b.isNotEmpty).toSet().toList();
+    brands.sort();
+    return brands;
   }
 
   // Filtered and sorted products list
-  List<Map<String, dynamic>> get products {
-    List<Map<String, dynamic>> list = List.from(_products);
+  List<Product> get products {
+    List<Product> list = List.from(_products);
 
     // 1. Filter by brand
     if (_selectedBrand != null) {
-      list = list.where((p) => p['brand']?.toString().toUpperCase() == _selectedBrand!.toUpperCase()).toList();
+      list = list.where((p) => p.brand.toUpperCase() == _selectedBrand!.toUpperCase()).toList();
     }
 
     // 2. Filter by price range
     if (_selectedPriceRange != null) {
       list = list.where((p) {
-        final priceNum = p['price'] as num? ?? 0;
-        final price = priceNum.toInt();
-        if (_selectedPriceRange == 'under_500k') {
-          return price < 500000;
-        } else if (_selectedPriceRange == '500k_1m') {
-          return price >= 500000 && price <= 1000000;
-        } else if (_selectedPriceRange == 'over_1m') {
-          return price > 1000000;
-        }
+        final price = p.activePrice;
+        if (_selectedPriceRange == 'under_500k') return price < 500000;
+        if (_selectedPriceRange == '500k_1m') return price >= 500000 && price <= 1000000;
+        if (_selectedPriceRange == 'over_1m') return price > 1000000;
         return true;
       }).toList();
     }
 
     // 3. Sort
     if (_sortBy == 'price_asc') {
-      list.sort((a, b) {
-        final aPrice = (a['price'] as num? ?? 0).toDouble();
-        final bPrice = (b['price'] as num? ?? 0).toDouble();
-        return aPrice.compareTo(bPrice);
-      });
+      list.sort((a, b) => a.activePrice.compareTo(b.activePrice));
     } else if (_sortBy == 'price_desc') {
-      list.sort((a, b) {
-        final aPrice = (a['price'] as num? ?? 0).toDouble();
-        final bPrice = (b['price'] as num? ?? 0).toDouble();
-        return bPrice.compareTo(aPrice);
-      });
+      list.sort((a, b) => b.activePrice.compareTo(a.activePrice));
     }
 
     return list;
@@ -92,14 +71,12 @@ class ProductProvider extends ChangeNotifier {
     try {
       _products = await _service.getProducts(category: category);
       _selectedCategory = category;
-      
-      // Auto-seed mock data if database is empty
+
       if (_products.isEmpty && category == null) {
         await _service.seedMockData();
         _products = await _service.getProducts(category: category);
       }
 
-      
       _status = LoadStatus.success;
     } catch (e) {
       _error = e.toString();

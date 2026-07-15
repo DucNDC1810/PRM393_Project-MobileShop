@@ -4,13 +4,14 @@ import 'package:project_mobileshop/core/utils/format_utils.dart';
 import 'package:project_mobileshop/core/widgets/product_image.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/cart/providers/cart_provider.dart';
+import 'package:project_mobileshop/features/product/models/product.dart';
 import 'package:project_mobileshop/features/product/providers/favorites_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/core/widgets/custom_toast.dart';
 import 'package:project_mobileshop/features/cart/screens/checkout_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
-  final Map<String, dynamic> product;
+  final Product product;
 
   const ProductDetailScreen({super.key, required this.product});
 
@@ -25,28 +26,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final favoritesProvider = context.watch<FavoritesProvider>();
     final p = widget.product;
-    final productId = p['id']?.toString() ?? '';
-    final bool isWishlisted = favoritesProvider.isFavorite(productId);
+    final bool isWishlisted = favoritesProvider.isFavorite(p.id);
 
-    // Safely extract price and originalPrice/salePrice from Firestore schema
-    final num priceVal = p['price'] ?? 0;
-    final num salePriceVal = p['sale_price'] ?? 0;
-
-    // If sale_price is > 0 and less than price, we have a discount
-    final bool hasDiscount = salePriceVal > 0 && salePriceVal < priceVal;
-    final int displayPrice = (hasDiscount ? salePriceVal : priceVal).toInt();
-    final int? displayOriginalPrice = hasDiscount ? priceVal.toInt() : null;
-
-    final String name = p['name'] ?? 'Sản phẩm';
-    final String brand = p['brand'] ?? 'Beauty & Glow';
-    final String description = p['description'] ?? 'Không có mô tả sản phẩm.';
-    final double rating = (p['rating'] ?? 4.8).toDouble();
-    final int reviews = (p['reviews'] ?? 12).toInt();
-
-    // Spec details map
-    final Map<String, dynamic> specs = p['specs'] is Map ? p['specs'] as Map<String, dynamic> : {};
-
-    final String emoji = resolveProductEmoji(p);
+    final String emoji = resolveProductEmoji(p.toMap());
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -64,14 +46,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               color: isWishlisted ? AppColors.primary : AppColors.onSurface,
             ),
             onPressed: () {
-              context.read<FavoritesProvider>().toggleFavorite(p);
-              final name = p['name'] ?? 'Sản phẩm';
-              final isNowFav = context.read<FavoritesProvider>().isFavorite(productId);
+              context.read<FavoritesProvider>().toggleFavorite(p.toMap());
+              final isNowFav = context.read<FavoritesProvider>().isFavorite(p.id);
               CustomToast.showSuccess(
                 context,
                 isNowFav
-                    ? 'Đã thêm $name vào danh sách yêu thích.'
-                    : 'Đã xóa $name khỏi danh sách yêu thích.',
+                    ? 'Đã thêm ${p.name} vào danh sách yêu thích.'
+                    : 'Đã xóa ${p.name} khỏi danh sách yêu thích.',
               );
             },
           ),
@@ -96,7 +77,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 border: Border.all(color: AppColors.outlineVariant),
               ),
               child: ProductImage(
-                product: p,
+                product: p.toMap(),
                 emoji: emoji,
                 emojiSize: 120,
                 borderRadius: BorderRadius.circular(23),
@@ -118,7 +99,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Text(
-                      brand.toUpperCase(),
+                      p.brand.toUpperCase(),
                       style: const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w700,
@@ -132,7 +113,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                   // Name
                   Text(
-                    name,
+                    p.name,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
@@ -148,7 +129,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const Icon(Icons.star, color: Color(0xFFFBC02D), size: 18),
                       const SizedBox(width: 4),
                       Text(
-                        '$rating',
+                        '${p.rating}',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -157,7 +138,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '($reviews đánh giá)',
+                        '(${p.reviews} đánh giá)',
                         style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.onSurfaceVariant,
@@ -187,7 +168,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${formatVnd(displayPrice)}đ',
+                        '${formatVnd(p.activePrice)}đ',
                         style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
@@ -196,9 +177,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      if (hasDiscount && displayOriginalPrice != null) ...[
+                      if (p.hasDiscount) ...[
                         Text(
-                          '${formatVnd(displayOriginalPrice)}đ',
+                          '${formatVnd(p.price)}đ',
                           style: const TextStyle(
                             fontSize: 16,
                             color: AppColors.onSurfaceVariant,
@@ -214,7 +195,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '-${(((displayOriginalPrice - displayPrice) / displayOriginalPrice) * 100).round()}%',
+                            '-${(((p.price - p.activePrice) / p.price) * 100).round()}%',
                             style: const TextStyle(
                               color: AppColors.onErrorContainer,
                               fontWeight: FontWeight.w700,
@@ -240,7 +221,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    description,
+                    p.description.isNotEmpty ? p.description : 'Không có mô tả sản phẩm.',
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.onSurfaceVariant,
@@ -254,10 +235,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   _buildCosmeticsInfo(p),
 
                   // Reviews section
-                  _ReviewsSection(productId: p['id'] as String? ?? ''),
+                  _ReviewsSection(productId: p.id),
 
-                  // Specs
-                  if (specs.isNotEmpty) ...[
+                  // Specs (from product.toMap()'s specs sub-map)
+                  Builder(builder: (context) {
+                    final specs = p.toMap()['specs'] as Map<String, dynamic>? ?? {};
+                    if (specs.isEmpty) return const SizedBox.shrink();
+                    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const Text(
                       'Thông tin chi tiết',
                       style: TextStyle(
@@ -334,7 +318,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                  ],
+                  ]);
+                  }),
                 ],
               ),
             ),
@@ -364,9 +349,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     IconButton(
                       icon: const Icon(Icons.remove, size: 18),
                       onPressed: () {
-                        if (_quantity > 1) {
-                          setState(() => _quantity--);
-                        }
+                        if (_quantity > 1) setState(() => _quantity--);
                       },
                     ),
                     Text(
@@ -378,9 +361,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.add, size: 18),
-                      onPressed: () {
-                        setState(() => _quantity++);
-                      },
+                      onPressed: p.stock > 0 && _quantity < p.stock
+                          ? () => setState(() => _quantity++)
+                          : null,
                     ),
                   ],
                 ),
@@ -393,10 +376,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   height: 48,
                   child: OutlinedButton(
                     onPressed: () {
-                      context.read<CartProvider>().addItem(p, quantity: _quantity);
+                      context.read<CartProvider>().addItem(p.toMap(), quantity: _quantity);
                       CustomToast.showSuccess(
                         context,
-                        'Đã thêm $_quantity x $name vào giỏ hàng.',
+                        'Đã thêm $_quantity x ${p.name} vào giỏ hàng.',
                       );
                     },
                     style: OutlinedButton.styleFrom(
@@ -425,7 +408,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   height: 48,
                   child: ElevatedButton(
                     onPressed: () {
-                      context.read<CartProvider>().addItem(p, quantity: _quantity);
+                      context.read<CartProvider>().addItem(p.toMap(), quantity: _quantity);
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const CheckoutScreen()),
                       );
@@ -456,12 +439,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  Widget _buildCosmeticsInfo(Map<String, dynamic> p) {
-    final skinType = p['skin_type'] as String?;
-    final ingredients = p['ingredients'] as String?;
-    final volume = p['volume'] as String?;
-    final howToUse = p['how_to_use'] as String?;
-    final origin = p['origin'] as String?;
+  Widget _buildCosmeticsInfo(Product p) {
+    final skinType = p.skinType.isNotEmpty ? p.skinType : null;
+    final ingredients = p.ingredients.isNotEmpty ? p.ingredients : null;
+    final volume = p.volume.isNotEmpty ? p.volume : null;
+    final howToUse = p.howToUse.isNotEmpty ? p.howToUse : null;
+    final origin = p.origin.isNotEmpty ? p.origin : null;
 
     final rows = <Map<String, String>>[];
     if (volume != null && volume.isNotEmpty) rows.add({'label': 'Dung tích', 'value': volume, 'icon': '📦'});

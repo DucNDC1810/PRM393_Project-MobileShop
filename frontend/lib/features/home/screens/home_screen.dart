@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:project_mobileshop/core/utils/format_utils.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
 import 'package:project_mobileshop/features/notification/screens/notification_screen.dart';
@@ -399,13 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Filter products with 'new' tag or just take 4
-    final newProducts = products.where((p) {
-      final tags = p['tags'];
-      if (tags is List) {
-        return tags.contains('new');
-      }
-      return false;
-    }).toList();
+    final newProducts = products.where((p) => p.tags.contains('new')).toList();
 
     final displayProducts = newProducts.isNotEmpty 
         ? newProducts 

@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:project_mobileshop/features/product/models/product.dart';
 
 class ProductService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  Future<List<Map<String, dynamic>>> getProducts({
+  Future<List<Product>> getProducts({
     String? category,
     String? brand,
     bool? onSale,
@@ -22,43 +23,31 @@ class ProductService {
 
     final snap = await query.get();
 
-    var products = snap.docs.map((doc) {
-      final data = doc.data();
-      return <String, dynamic>{...data, 'id': doc.id};
-    }).toList();
+    final docs = snap.docs;
+    var products = docs.map((doc) => Product.fromFirestore(doc)).toList();
 
     // sort client-side để tránh cần composite index
     products.sort((a, b) {
-      final aTime = a['created_at'];
-      final bTime = b['created_at'];
+      final aTime = (docs.firstWhere((d) => d.id == a.id).data())['created_at'];
+      final bTime = (docs.firstWhere((d) => d.id == b.id).data())['created_at'];
       if (aTime == null || bTime == null) return 0;
       return bTime.compareTo(aTime);
     });
 
     if (onSale == true) {
-      return products.where((p) {
-        final salePrice = p['sale_price'];
-        return salePrice is num && salePrice > 0;
-      }).toList();
+      return products.where((p) => p.hasDiscount).toList();
     }
 
     return products;
   }
 
-  Future<Map<String, dynamic>?> getProductById(String id) async {
+  Future<Product?> getProductById(String id) async {
     final doc = await _db.collection('products').doc(id).get();
     if (!doc.exists) return null;
-
-    final data = doc.data();
-    if (data == null) return null;
-
-    return <String, dynamic>{
-      ...data,
-      'id': doc.id,
-    };
+    return Product.fromFirestore(doc);
   }
 
-  Future<List<Map<String, dynamic>>> search(String keyword) async {
+  Future<List<Product>> search(String keyword) async {
     final snap = await _db
         .collection('products')
         .where('is_active', isEqualTo: true)
@@ -67,13 +56,7 @@ class ProductService {
         .endAt(['$keyword\uf8ff'])
         .get();
 
-    return snap.docs.map((doc) {
-      final data = doc.data();
-      return <String, dynamic>{
-        ...data,
-        'id': doc.id,
-      };
-    }).toList();
+    return snap.docs.map((doc) => Product.fromFirestore(doc)).toList();
   }
 
   Future<void> createProduct(Map<String, dynamic> data) async {

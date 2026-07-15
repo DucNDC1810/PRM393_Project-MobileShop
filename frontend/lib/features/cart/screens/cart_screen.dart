@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:project_mobileshop/core/utils/format_utils.dart';
 import 'package:project_mobileshop/core/widgets/product_image.dart';
@@ -22,6 +21,8 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   String _couponCode = '';
   bool _couponApplied = false;
+
+  static const _validCoupons = {'BEAUTYIO', 'GLOW10', 'WELCOME10', 'SALE10'};
 
   @override
   void initState() {
@@ -371,7 +372,19 @@ class _CartScreenState extends State<CartScreen> {
               const SizedBox(width: 10),
               ElevatedButton(
                 onPressed: _couponCode.isNotEmpty
-                    ? () => setState(() => _couponApplied = true)
+                    ? () {
+                        if (_validCoupons.contains(_couponCode.trim().toUpperCase())) {
+                          setState(() => _couponApplied = true);
+                        } else {
+                          setState(() => _couponApplied = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Mã giảm giá không hợp lệ'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

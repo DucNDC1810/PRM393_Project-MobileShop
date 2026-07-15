@@ -2,15 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:project_mobileshop/core/utils/format_utils.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
 import 'package:project_mobileshop/features/cart/providers/cart_provider.dart';
-import 'package:project_mobileshop/features/wallet/services/payos_service.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/core/widgets/custom_toast.dart';
 import 'package:project_mobileshop/features/order/screens/order_success_screen.dart';
 import 'package:project_mobileshop/features/order/screens/payment_waiting_screen.dart';
-import 'package:project_mobileshop/features/notification/services/notification_service.dart';
+import 'package:project_mobileshop/features/order/services/order_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final int discount;
@@ -302,7 +300,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    // Kiểm tra giới hạn địa chỉ TRƯỚC KHI tạo đơn hàng
     final newAddress = {
       'name': _nameCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
@@ -322,176 +319,83 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    // Calculate total amount
     final cartItems = cart.itemsAsMap;
     final int subtotal = cart.totalAmount;
     final int shippingFee = _shippingMethod == 'standard' ? (subtotal > 500000 || subtotal == 0 ? 0 : 30000) : 60000;
     final int total = subtotal - widget.discount + shippingFee;
+    final user = auth.user;
 
-    // Show loading dialog
+    if (_paymentMethod == 'wallet' && user != null) {
+      final balance = await OrderService.getWalletBalance(user.uid);
+      if (balance < total) {
+        if (mounted) CustomToast.showError(context, 'Số dư ví không đủ. Vui lòng nạp thêm tiền!');
+        return;
+      }
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
+      builder: (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
     );
 
-    try {
-      final user = auth.user;
-      
-      // Khúc xử lý thanh toán ví
-      if (_paymentMethod == 'wallet' && user != null) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        final currentBalance = doc.data()?['wallet_balance'] ?? 0;
-        if (currentBalance < total) {
-          if (mounted) Navigator.of(context).pop();
-          CustomToast.showError(context, 'Số dư ví không đủ. Vui lòng nạp thêm tiền!');
-          return;
-        }
-      }
+    final itemsData = cartItems.map((item) => {
+      'id': item['id'],
+      'name': item['name'],
+      'brand': item['brand'],
+      'price': item['price'],
+      'quantity': item['quantity'],
+      'emoji': item['emoji'],
+      'images': item['images'],
+      'image_url': item['image_url'],
+    }).toList();
 
-      final itemsData = cartItems.map((item) => {
-        'id': item['id'],
-        'name': item['name'],
-        'brand': item['brand'],
-        'price': item['price'],
-        'quantity': item['quantity'],
-        'emoji': item['emoji'],
-        'images': item['images'],
-        'image_url': item['image_url'],
-      }).toList();
+    final orderId = _generateOrderId();
+    final result = await OrderService.placeOrder(
+      userUid: user?.uid,
+      userEmail: user?.email,
+      items: itemsData,
+      shippingInfo: newAddress,
+      shippingMethod: _shippingMethod,
+      paymentMethod: _paymentMethod,
+      subtotal: subtotal,
+      discount: widget.discount,
+      shippingFee: shippingFee,
+      total: total,
+      orderId: orderId,
+    );
 
-      final orderId = _generateOrderId();
-      final int orderCode = DateTime.now().millisecondsSinceEpoch;
+    if (!addressExists && user != null) {
+      _savedAddresses.insert(0, newAddress);
+      await OrderService.saveAddress(user.uid, newAddress, _savedAddresses);
+    }
 
-      final docRef = await FirebaseFirestore.instance.collection('orders').add({
-        'order_id': orderId,
-        'user_email': user?.email,
-        'user_uid': user?.uid,
-        'shipping_info': {
-          'name': _nameCtrl.text.trim(),
-          'phone': _phoneCtrl.text.trim(),
-          'district': _selectedDistrict,
-          'city': _cityCtrl.text.trim(),
-          'notes': _notesCtrl.text.trim(),
-        },
-        'shipping_method': _shippingMethod == 'standard' ? 'Giao hàng tiêu chuẩn' : 'Giao hàng nhanh',
-        'payment_method': _paymentMethod == 'cod'
-            ? 'Thanh toán khi nhận hàng'
-            : (_paymentMethod == 'payos' ? 'Thanh toán chuyển khoản' : 'Thanh toán bằng số dư ví'),
-        'items': itemsData,
-        'subtotal': subtotal,
-        'discount': widget.discount,
-        'shipping_fee': shippingFee,
-        'total': total,
-        'status': _paymentMethod == 'payos' ? 'Đang thanh toán' : 'Chờ xử lý',
-        'order_code': _paymentMethod == 'payos' ? orderCode : null,
-        'created_at': FieldValue.serverTimestamp(),
-      });
+    cart.clear();
 
-      // Gửi thông báo đặt hàng thành công
-      if (user != null) {
-        final short = orderId.length > 8 ? orderId.substring(0, 8) : orderId;
-        await NotificationService.push(
-          userUid: user.uid,
-          title: 'Đặt hàng thành công 🎉',
-          body: 'Đơn hàng #$short của bạn đã được tiếp nhận và đang chờ xác nhận.',
-          type: 'order',
-          extra: {'order_id': orderId},
-        );
-      }
+    if (!mounted) return;
+    Navigator.of(context).pop(); // dismiss loading
 
-      if (!addressExists && user != null) {
-        _savedAddresses.insert(0, newAddress);
-        try {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-            'saved_addresses': _savedAddresses
-          });
-        } catch (e) {
-          debugPrint('Failed to save address: $e');
-        }
-      }
+    if (result.result == PlaceOrderResult.error) {
+      CustomToast.showError(context, 'Đã có lỗi xảy ra: ${result.errorMessage}');
+      return;
+    }
 
-      // Clear cart
-      cart.clear();
-
-      if (_paymentMethod == 'payos') {
-        
-        final payosData = await PayOSService.createPaymentLink(
-          orderCode: orderCode,
-          amount: total,
-          description: 'Thanh toan don hang',
-        );
-
-        final checkoutUrl = payosData['checkoutUrl'] as String? ?? '';
-        final qrCode = payosData['qrCode'] as String? ?? '';
-
-        // Lưu lại checkoutUrl và qrCode để có thể resume sau
-        await docRef.update({
-          'checkout_url': checkoutUrl,
-          'qr_code': qrCode,
-        });
-
-        // Tắt loading
-        if (mounted) Navigator.of(context).pop();
-
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => PaymentWaitingScreen(
-                orderCode: orderCode,
-                firebaseOrderId: orderId,
-                firebaseDocId: docRef.id,
-                checkoutUrl: checkoutUrl,
-                qrCode: qrCode,
-              ),
-            ),
-          );
-        }
-      } else {
-        if (_paymentMethod == 'wallet' && user != null) {
-          // Trừ tiền trong ví
-          await FirebaseFirestore.instance.runTransaction((transaction) async {
-            final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-            final snapshot = await transaction.get(userDocRef);
-            int currentBalance = 0;
-            if (snapshot.exists && snapshot.data()!.containsKey('wallet_balance')) {
-              currentBalance = snapshot.get('wallet_balance');
-            }
-            transaction.update(userDocRef, {'wallet_balance': currentBalance - total});
-          });
-
-          // Lưu lịch sử
-          await FirebaseFirestore.instance.collection('wallet_transactions').add({
-            'user_uid': user.uid,
-            'type': 'payment',
-            'amount': total,
-            'status': 'completed',
-            'order_id': orderId,
-            'created_at': FieldValue.serverTimestamp(),
-          });
-        }
-
-        // Tắt loading
-        if (mounted) Navigator.of(context).pop();
-
-        // Chuyển tới OrderSuccessScreen cho COD/Bank/Wallet
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => OrderSuccessScreen(orderId: orderId),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      // Dismiss loading
-      if (mounted) Navigator.of(context).pop();
-      
-      if (mounted) {
-        CustomToast.showError(context, 'Đã có lỗi xảy ra: $e');
-      }
+    if (result.result == PlaceOrderResult.payos) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => PaymentWaitingScreen(
+            orderCode: result.orderCode!,
+            firebaseOrderId: orderId,
+            firebaseDocId: result.docId!,
+            checkoutUrl: result.checkoutUrl!,
+            qrCode: result.qrCode!,
+          ),
+        ),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => OrderSuccessScreen(orderId: orderId)),
+      );
     }
   }
 

@@ -17,6 +17,9 @@ class Product {
   final String volume;
   final String howToUse;
   final String origin;
+  final double rating;
+  final int reviews;
+  final List<String> tags;
 
   const Product({
     required this.id,
@@ -35,6 +38,9 @@ class Product {
     this.volume = '',
     this.howToUse = '',
     this.origin = '',
+    this.rating = 4.8,
+    this.reviews = 12,
+    this.tags = const [],
   });
 
   bool get hasDiscount => salePrice > 0 && salePrice < price;
@@ -64,10 +70,14 @@ class Product {
       volume: (specs['volume'] ?? data['volume'] ?? '') as String,
       howToUse: (specs['how_to_use'] ?? data['how_to_use'] ?? '') as String,
       origin: (specs['origin'] ?? data['origin'] ?? '') as String,
+      rating: (data['rating'] as num? ?? 4.8).toDouble(),
+      reviews: (data['reviews'] as num? ?? 12).toInt(),
+      tags: List<String>.from(data['tags'] as List? ?? []),
     );
   }
 
   Map<String, dynamic> toMap() => {
+        'id': id,
         'name': name,
         'brand': brand,
         'category': category,
@@ -78,6 +88,9 @@ class Product {
         'stock': stock,
         'images': images,
         'image_url': imageUrl,
+        'rating': rating,
+        'reviews': reviews,
+        'tags': tags,
         'specs': {
           'ingredients': ingredients,
           'skin_type': skinType,

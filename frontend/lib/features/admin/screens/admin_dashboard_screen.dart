@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:project_mobileshop/core/utils/format_utils.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
 import 'package:project_mobileshop/features/notification/services/notification_service.dart';
+import 'package:project_mobileshop/features/product/models/product.dart';
 import 'package:project_mobileshop/features/product/providers/product_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/features/admin/screens/admin_chat_detail_screen.dart';
@@ -200,124 +202,110 @@ class _InventoryTab extends StatelessWidget {
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       final product = products[index];
-                      final stock = (product['stock'] as num?)?.toInt() ?? 0;
-                      final isLowStock = stock < 10;
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                      return _AdminProductCard(
+                        product: product,
+                        onEdit: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => AdminProductFormScreen(product: product.toMap())),
                         ),
-                        child: Row(
-                          children: [
-                            // Product Image
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: product['images'] != null && (product['images'] as List).isNotEmpty
-                                  ? Image.network(
-                                      product['images'][0],
-                                      width: 70,
-                                      height: 70,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                        width: 70,
-                                        height: 70,
-                                        color: Colors.grey.shade200,
-                                        child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
-                                      ),
-                                    )
-                                  : Container(
-                                      width: 70,
-                                      height: 70,
-                                      color: Colors.grey.shade200,
-                                      child: const Icon(Icons.image, color: Colors.grey),
-                                    ),
-                            ),
-                            const SizedBox(width: 16),
-                            // Product Details
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    product['name'] ?? '',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                      color: AppColors.primary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0).format(product['price'] ?? 0),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isLowStock ? const Color(0xFFFFE5E5) : const Color(0xFFEBE3DF),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          isLowStock ? 'Low Stock: $stock' : 'Stock: $stock',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: isLowStock ? Colors.red.shade700 : AppColors.primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Action Icons
-                            Column(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 22),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => AdminProductFormScreen(product: product)),
-                                    );
-                                  },
-                                  constraints: const BoxConstraints(),
-                                  padding: const EdgeInsets.all(4),
-                                ),
-                                const SizedBox(height: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: AppColors.primary, size: 22),
-                                  onPressed: () => _deleteProduct(context, product['id']),
-                                  constraints: const BoxConstraints(),
-                                  padding: const EdgeInsets.all(4),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                        onDelete: () => _deleteProduct(context, product.id),
                       );
                     },
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminProductCard extends StatelessWidget {
+  final Product product;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _AdminProductCard({required this.product, required this.onEdit, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final isLowStock = product.stock < 10;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: product.images.isNotEmpty
+                ? Image.network(
+                    product.images.first,
+                    width: 70, height: 70, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 70, height: 70, color: Colors.grey.shade200,
+                      child: const Icon(Icons.broken_image_outlined, color: Colors.grey),
+                    ),
+                  )
+                : Container(
+                    width: 70, height: 70, color: Colors.grey.shade200,
+                    child: const Icon(Icons.image, color: Colors.grey),
+                  ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.primary),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                      '${formatVnd(product.activePrice)}đ',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isLowStock ? const Color(0xFFFFE5E5) : const Color(0xFFEBE3DF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        isLowStock ? 'Low Stock: ${product.stock}' : 'Stock: ${product.stock}',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                          color: isLowStock ? Colors.red.shade700 : AppColors.primary),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 22),
+                onPressed: onEdit,
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.all(4),
+              ),
+              const SizedBox(height: 8),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: AppColors.primary, size: 22),
+                onPressed: onDelete,
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.all(4),
+              ),
+            ],
           ),
         ],
       ),
@@ -431,7 +419,6 @@ class _OrdersTab extends StatelessWidget {
           );
         }
 
-        final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫', decimalDigits: 0);
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: docs.length,
@@ -546,7 +533,7 @@ class _OrdersTab extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Tổng tiền:', style: TextStyle(fontFamily: 'DM Sans', fontSize: 13, color: AppColors.onSurfaceVariant)),
-                            Text(fmt.format(total), style: const TextStyle(fontFamily: 'DM Sans', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                            Text('${formatVnd(total.toInt())}đ', style: const TextStyle(fontFamily: 'DM Sans', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.primary)),
                           ],
                         ),
                         const SizedBox(height: 10),

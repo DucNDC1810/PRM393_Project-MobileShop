@@ -3,53 +3,25 @@ import 'package:provider/provider.dart';
 import 'package:project_mobileshop/core/utils/format_utils.dart';
 import 'package:project_mobileshop/core/widgets/product_image.dart';
 import 'package:project_mobileshop/features/cart/providers/cart_provider.dart';
+import 'package:project_mobileshop/features/product/models/product.dart';
 import 'package:project_mobileshop/features/product/providers/favorites_provider.dart';
 import 'package:project_mobileshop/features/product/screens/product_detail_screen.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 import 'package:project_mobileshop/core/widgets/custom_toast.dart';
 
-class ProductCard extends StatefulWidget {
-  final Map<String, dynamic> product;
+class ProductCard extends StatelessWidget {
+  final Product product;
 
   const ProductCard({super.key, required this.product});
 
   @override
-  State<ProductCard> createState() => _ProductCardState();
-}
-
-class _ProductCardState extends State<ProductCard> {
-  @override
   Widget build(BuildContext context) {
     final favoritesProvider = context.watch<FavoritesProvider>();
-    final p = widget.product;
-    final productId = p['id']?.toString() ?? '';
-    final bool isWishlisted = favoritesProvider.isFavorite(productId);
+    final p = product;
+    final bool isWishlisted = favoritesProvider.isFavorite(p.id);
 
-    // Safely extract price and originalPrice/salePrice from Firestore schema
-    final num priceVal = p['price'] ?? 0;
-    final num salePriceVal = p['sale_price'] ?? 0;
-
-    // If sale_price is > 0 and less than price, we have a discount
-    final bool hasDiscount = salePriceVal > 0 && salePriceVal < priceVal;
-    final int displayPrice = (hasDiscount ? salePriceVal : priceVal).toInt();
-    final int? displayOriginalPrice = hasDiscount ? priceVal.toInt() : null;
-
-    final String name = p['name'] ?? 'Sản phẩm';
-    final String brand = p['brand'] ?? 'Beauty & Glow';
-    
-    // Safely parse double and int
-    final double rating = (p['rating'] ?? 4.8).toDouble();
-    final int reviews = (p['reviews'] ?? 12).toInt();
-
-    // Resolve tag from tag string or tags list
-    String? displayTag;
-    if (p['tag'] != null) {
-      displayTag = p['tag'] as String;
-    } else if (p['tags'] is List && (p['tags'] as List).isNotEmpty) {
-      displayTag = (p['tags'] as List).first.toString();
-    }
-
-    final String emoji = resolveProductEmoji(p);
+    final String? displayTag = p.tags.isNotEmpty ? p.tags.first : null;
+    final String emoji = resolveProductEmoji(p.toMap());
 
     return GestureDetector(
       onTap: () {
@@ -89,7 +61,7 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                     ),
                     child: ProductImage(
-                      product: p,
+                      product: p.toMap(),
                       emoji: emoji,
                       emojiSize: 56,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -124,14 +96,13 @@ class _ProductCardState extends State<ProductCard> {
                     right: 6,
                     child: GestureDetector(
                       onTap: () {
-                        context.read<FavoritesProvider>().toggleFavorite(p);
-                        final name = p['name'] ?? 'Sản phẩm';
-                        final isNowFav = context.read<FavoritesProvider>().isFavorite(productId);
+                        context.read<FavoritesProvider>().toggleFavorite(p.toMap());
+                        final isNowFav = context.read<FavoritesProvider>().isFavorite(p.id);
                         CustomToast.showSuccess(
                           context,
                           isNowFav
-                              ? 'Đã thêm $name vào danh sách yêu thích.'
-                              : 'Đã xóa $name khỏi danh sách yêu thích.',
+                              ? 'Đã thêm ${p.name} vào danh sách yêu thích.'
+                              : 'Đã xóa ${p.name} khỏi danh sách yêu thích.',
                         );
                       },
                       child: Container(
@@ -168,7 +139,7 @@ class _ProductCardState extends State<ProductCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      brand,
+                      p.brand,
                       style: const TextStyle(
                         fontSize: 10,
                         color: AppColors.onSurfaceVariant,
@@ -179,7 +150,7 @@ class _ProductCardState extends State<ProductCard> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      name,
+                      p.name,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -195,7 +166,7 @@ class _ProductCardState extends State<ProductCard> {
                         const Icon(Icons.star, size: 12, color: Color(0xFFFBC02D)),
                         const SizedBox(width: 2),
                         Text(
-                          '$rating',
+                          '${p.rating}',
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -204,7 +175,7 @@ class _ProductCardState extends State<ProductCard> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '($reviews)',
+                          '(${p.reviews})',
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.onSurfaceVariant,
@@ -221,7 +192,7 @@ class _ProductCardState extends State<ProductCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${formatVnd(displayPrice)}đ',
+                              '${formatVnd(p.activePrice)}đ',
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -229,9 +200,9 @@ class _ProductCardState extends State<ProductCard> {
                                 fontFamily: 'DM Sans',
                               ),
                             ),
-                            if (hasDiscount && displayOriginalPrice != null)
+                            if (p.hasDiscount)
                               Text(
-                                '${formatVnd(displayOriginalPrice)}đ',
+                                '${formatVnd(p.price)}đ',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.onSurfaceVariant,
@@ -242,10 +213,10 @@ class _ProductCardState extends State<ProductCard> {
                         ),
                         GestureDetector(
                           onTap: () {
-                            context.read<CartProvider>().addItem(p, quantity: 1);
+                            context.read<CartProvider>().addItem(p.toMap(), quantity: 1);
                             CustomToast.showSuccess(
                               context,
-                              'Đã thêm $name vào giỏ hàng.',
+                              'Đã thêm ${p.name} vào giỏ hàng.',
                             );
                           },
                           child: Container(
@@ -269,5 +240,4 @@ class _ProductCardState extends State<ProductCard> {
       ),
     );
   }
-
 }
