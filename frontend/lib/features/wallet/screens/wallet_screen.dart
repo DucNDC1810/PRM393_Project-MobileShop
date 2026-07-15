@@ -39,7 +39,8 @@ class _WalletScreenState extends State<WalletScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to fetch wallet balance: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -190,7 +191,9 @@ class _WalletScreenState extends State<WalletScreen> {
       if (raw is List) {
         savedAccounts = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to load bank accounts: $e');
+    }
 
     if (!mounted) return;
 
@@ -851,7 +854,14 @@ class _BankAccountPickerSheetState extends State<_BankAccountPickerSheet> {
                           ),
                         );
                       }
-                    } catch (_) {}
+                    } catch (e) {
+                      debugPrint('Failed to save bank account: $e');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Lưu tài khoản thất bại!'), backgroundColor: Colors.red),
+                        );
+                      }
+                    }
                   },
                   icon: const Icon(Icons.save_outlined, size: 18),
                   label: const Text('Lưu tài khoản này', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600)),

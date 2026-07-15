@@ -23,6 +23,17 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+  String? _lastUid;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final uid = context.read<AuthProvider>().user?.uid;
+    if (uid != null && uid != _lastUid) {
+      _lastUid = uid;
+      context.read<FavoritesProvider>().loadForUser(uid);
+    }
+  }
 
   void _onTabTapped(int index, bool isLoggedIn) {
     final requiresAuth = index == 3 || index == 4;
@@ -46,7 +57,6 @@ class _MainShellState extends State<MainShell> {
       setState(() => _currentIndex = 1);
     }),
     CartScreen(onShopNowPressed: () {
-      print('Shop Now pressed - changing index to 1');
       setState(() => _currentIndex = 1);
     }),
     ProfileScreen(

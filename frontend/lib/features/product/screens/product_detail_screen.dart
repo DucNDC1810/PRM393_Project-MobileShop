@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:project_mobileshop/core/utils/format_utils.dart';
+import 'package:project_mobileshop/core/widgets/product_image.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/cart/providers/cart_provider.dart';
 import 'package:project_mobileshop/features/product/providers/favorites_provider.dart';
@@ -44,27 +46,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     // Spec details map
     final Map<String, dynamic> specs = p['specs'] is Map ? p['specs'] as Map<String, dynamic> : {};
 
-    // Resolve image emoji representation safely
-    String emoji = '💄';
-    if (p['emoji'] != null) {
-      emoji = p['emoji'] as String;
-    } else {
-      final category = (p['category'] ?? '').toString().toLowerCase();
-      final nameLower = name.toLowerCase();
-      if (category.contains('skincare') || nameLower.contains('serum') || nameLower.contains('toner') || nameLower.contains('kem dưỡng')) {
-        emoji = '🧴';
-      } else if (category.contains('makeup') || nameLower.contains('son') || nameLower.contains('phấn') || nameLower.contains('mascara')) {
-        emoji = '💄';
-      } else if (category.contains('perfume') || nameLower.contains('nước hoa')) {
-        emoji = '🌸';
-      } else if (category.contains('cleanser') || nameLower.contains('rửa mặt') || nameLower.contains('tẩy trang')) {
-        emoji = '🫧';
-      } else if (nameLower.contains('mask') || nameLower.contains('mặt nạ')) {
-        emoji = '🎭';
-      } else {
-        emoji = '✨';
-      }
-    }
+    final String emoji = resolveProductEmoji(p);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -113,7 +95,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: AppColors.outlineVariant),
               ),
-              child: _buildProductImage(p, emoji, 120),
+              child: ProductImage(
+                product: p,
+                emoji: emoji,
+                emojiSize: 120,
+                borderRadius: BorderRadius.circular(23),
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -200,7 +187,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${_formatPrice(displayPrice)}đ',
+                        '${formatVnd(displayPrice)}đ',
                         style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
@@ -211,7 +198,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const SizedBox(width: 10),
                       if (hasDiscount && displayOriginalPrice != null) ...[
                         Text(
-                          '${_formatPrice(displayOriginalPrice)}đ',
+                          '${formatVnd(displayOriginalPrice)}đ',
                           style: const TextStyle(
                             fontSize: 16,
                             color: AppColors.onSurfaceVariant,
@@ -567,54 +554,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  Widget _buildProductImage(Map<String, dynamic> p, String emoji, double emojiSize) {
-    final images = p['images'];
-    String? imageUrl;
-    if (images is List && images.isNotEmpty) {
-      imageUrl = images.first?.toString();
-    } else if (p['image_url'] != null) {
-      imageUrl = p['image_url'].toString();
-    }
-
-    if (imageUrl != null && imageUrl.startsWith('http')) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(23),
-        child: Image.network(
-          imageUrl,
-          width: double.infinity,
-          height: double.infinity,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Center(
-              child: Text(
-                emoji,
-                style: TextStyle(fontSize: emojiSize),
-              ),
-            );
-          },
-        ),
-      );
-    }
-    return Center(
-      child: Text(
-        emoji,
-        style: TextStyle(fontSize: emojiSize),
-      ),
-    );
-  }
-
-  String _formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]}.',
-        );
-  }
 }
 
 /// Section hiển thị danh sách đánh giá của sản phẩm từ Firestore.

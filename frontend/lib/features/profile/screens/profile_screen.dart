@@ -93,7 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _periodEnd = DateTime(periodEnd.year, periodEnd.month - 1, 30);
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to fetch profile stats: $e');
+    }
   }
 
   // Rank dựa trên số liệu 6 tháng gần nhất

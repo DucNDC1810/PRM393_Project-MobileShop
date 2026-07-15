@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -63,7 +64,9 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen> {
           .collection('orders')
           .doc(widget.firebaseDocId)
           .update({'status': 'Đã thanh toán'});
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to update payment status: $e');
+    }
 
     // Chuyển sang màn hình Order Success
     if (mounted) {
@@ -84,7 +87,9 @@ class _PaymentWaitingScreenState extends State<PaymentWaitingScreen> {
           .collection('orders')
           .doc(widget.firebaseDocId)
           .update({'status': 'Đã hủy (Thanh toán thất bại)'});
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to update cancelled payment status: $e');
+    }
   }
 
   Future<void> _openPaymentLink() async {

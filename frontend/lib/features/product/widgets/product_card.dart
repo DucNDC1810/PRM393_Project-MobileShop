@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:project_mobileshop/core/utils/format_utils.dart';
+import 'package:project_mobileshop/core/widgets/product_image.dart';
 import 'package:project_mobileshop/features/cart/providers/cart_provider.dart';
 import 'package:project_mobileshop/features/product/providers/favorites_provider.dart';
 import 'package:project_mobileshop/features/product/screens/product_detail_screen.dart';
@@ -47,37 +49,7 @@ class _ProductCardState extends State<ProductCard> {
       displayTag = (p['tags'] as List).first.toString();
     }
 
-    // Resolve image emoji representation safely
-    String emoji = '✨';
-    if (p['emoji'] != null) {
-      emoji = p['emoji'] as String;
-    } else {
-      final category = (p['category'] ?? '').toString().toLowerCase();
-      final nameLower = name.toLowerCase();
-      if (category.contains('skincare') || category.contains('makeup') || category.contains('perfume') || category.contains('hair')) {
-        if (category.contains('skincare')) {
-          emoji = '🧴';
-        } else if (category.contains('makeup')) {
-          emoji = '💄';
-        } else if (category.contains('perfume')) {
-          emoji = '🛍️';
-        } else {
-          emoji = '🧼';
-        }
-      } else {
-        if (nameLower.contains('tai nghe') || nameLower.contains('headphone') || category.contains('audio')) {
-          emoji = '🎧';
-        } else if (nameLower.contains('cáp') || nameLower.contains('sạc') || nameLower.contains('charger') || category.contains('accessory')) {
-          emoji = '🔌';
-        } else if (nameLower.contains('đồng hồ') || nameLower.contains('watch') || category.contains('wearable')) {
-          emoji = '⌚';
-        } else if (nameLower.contains('ipad') || nameLower.contains('tablet') || nameLower.contains('máy tính bảng')) {
-          emoji = '📟';
-        } else {
-          emoji = '✨'; // Default sparkles
-        }
-      }
-    }
+    final String emoji = resolveProductEmoji(p);
 
     return GestureDetector(
       onTap: () {
@@ -116,7 +88,12 @@ class _ProductCardState extends State<ProductCard> {
                         top: Radius.circular(16),
                       ),
                     ),
-                    child: _buildProductImage(p, emoji, 56),
+                    child: ProductImage(
+                      product: p,
+                      emoji: emoji,
+                      emojiSize: 56,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    ),
                   ),
                   if (displayTag != null)
                     Positioned(
@@ -244,7 +221,7 @@ class _ProductCardState extends State<ProductCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${_formatPrice(displayPrice)}đ',
+                              '${formatVnd(displayPrice)}đ',
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -254,7 +231,7 @@ class _ProductCardState extends State<ProductCard> {
                             ),
                             if (hasDiscount && displayOriginalPrice != null)
                               Text(
-                                '${_formatPrice(displayOriginalPrice)}đ',
+                                '${formatVnd(displayOriginalPrice)}đ',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.onSurfaceVariant,
@@ -293,56 +270,4 @@ class _ProductCardState extends State<ProductCard> {
     );
   }
 
-  Widget _buildProductImage(Map<String, dynamic> p, String emoji, double emojiSize) {
-    final images = p['images'];
-    String? imageUrl;
-    if (images is List && images.isNotEmpty) {
-      imageUrl = images.first?.toString();
-    } else if (p['image_url'] != null) {
-      imageUrl = p['image_url'].toString();
-    }
-    
-    if (imageUrl != null && imageUrl.startsWith('http')) {
-      return ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        child: Image.network(
-          imageUrl,
-          width: double.infinity,
-          height: double.infinity,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Center(
-              child: Text(
-                emoji,
-                style: TextStyle(fontSize: emojiSize),
-              ),
-            );
-          },
-        ),
-      );
-    }
-    return Center(
-      child: Text(
-        emoji,
-        style: TextStyle(fontSize: emojiSize),
-      ),
-    );
-  }
-
-  String _formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]}.',
-        );
-  }
 }

@@ -10,9 +10,17 @@ import 'package:project_mobileshop/features/cart/providers/cart_provider.dart';
 import 'package:project_mobileshop/features/product/providers/favorites_provider.dart';
 import 'package:project_mobileshop/features/admin/screens/admin_dashboard_screen.dart';
 import 'package:project_mobileshop/features/auth/screens/login_screen.dart';
+import 'package:project_mobileshop/features/auth/screens/register_screen.dart';
+import 'package:project_mobileshop/features/cart/screens/cart_screen.dart';
+import 'package:project_mobileshop/features/cart/screens/checkout_screen.dart';
 import 'package:project_mobileshop/features/home/screens/main_shell.dart';
 import 'package:project_mobileshop/features/home/screens/splash_screen.dart';
+import 'package:project_mobileshop/features/notification/screens/notification_screen.dart';
+import 'package:project_mobileshop/features/order/screens/my_orders_screen.dart';
+import 'package:project_mobileshop/features/product/screens/products_screen.dart';
 import 'package:project_mobileshop/features/product/services/product_service.dart';
+import 'package:project_mobileshop/features/wallet/screens/wallet_screen.dart';
+import 'package:project_mobileshop/features/wallet/screens/bank_accounts_screen.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
 
 import 'package:google_sign_in/google_sign_in.dart';
@@ -64,9 +72,17 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.theme,
         home: const SplashScreen(),
         routes: {
-          '/login': (_) => const LoginScreen(),
-          '/home': (_) => const MainShell(),
-          '/admin': (_) => const AdminDashboardScreen(),
+          '/login':         (_) => const LoginScreen(),
+          '/register':      (_) => const RegisterScreen(),
+          '/home':          (_) => const MainShell(),
+          '/admin':         (_) => const AdminDashboardScreen(),
+          '/products':      (_) => const ProductsScreen(),
+          '/cart':          (_) => const CartScreen(),
+          '/checkout':      (_) => const CheckoutScreen(),
+          '/orders':        (_) => const MyOrdersScreen(),
+          '/wallet':        (_) => const WalletScreen(),
+          '/bank-accounts': (_) => const BankAccountsScreen(),
+          '/notifications': (_) => const NotificationScreen(),
         },
       ),
     );

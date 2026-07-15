@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:project_mobileshop/core/utils/format_utils.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
@@ -407,7 +408,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
             'saved_addresses': _savedAddresses
           });
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('Failed to save address: $e');
+        }
       }
 
       // Clear cart
@@ -450,13 +453,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         if (_paymentMethod == 'wallet' && user != null) {
           // Trừ tiền trong ví
           await FirebaseFirestore.instance.runTransaction((transaction) async {
-            final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-            final snapshot = await transaction.get(docRef);
+            final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+            final snapshot = await transaction.get(userDocRef);
             int currentBalance = 0;
             if (snapshot.exists && snapshot.data()!.containsKey('wallet_balance')) {
               currentBalance = snapshot.get('wallet_balance');
             }
-            transaction.update(docRef, {'wallet_balance': currentBalance - total});
+            transaction.update(userDocRef, {'wallet_balance': currentBalance - total});
           });
 
           // Lưu lịch sử
@@ -1189,7 +1192,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            '${_formatPrice(price * quantity)}đ',
+            '${formatVnd(price * quantity)}đ',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -1238,7 +1241,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
               Text(
-                '${_formatPrice(total)}đ',
+                '${formatVnd(total)}đ',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -1276,7 +1279,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               )
             : Text(
-                '${isDiscount ? '-' : ''}${_formatPrice(amount.abs())}đ',
+                '${isDiscount ? '-' : ''}${formatVnd(amount.abs())}đ',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -1388,10 +1391,4 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             fontSize: 10, color: AppColors.error, fontFamily: 'DM Sans'),
       );
 
-  String _formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]}.',
-        );
-  }
 }

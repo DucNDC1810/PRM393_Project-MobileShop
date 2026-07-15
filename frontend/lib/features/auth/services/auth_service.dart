@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
@@ -207,11 +208,8 @@ class AuthService {
   Future<bool> emailExists(String email) async {
     try {
       final methods = await _auth.fetchSignInMethodsForEmail(email.trim());
-      print('Firebase Auth methods for ${email.trim()}: $methods');
       if (methods.isNotEmpty) return true;
-    } catch (e) {
-      print('Firebase Auth fetch error: $e');
-    }
+    } catch (_) {}
 
     try {
       final query = await _db
@@ -219,10 +217,9 @@ class AuthService {
           .where('email', isEqualTo: email.trim())
           .limit(1)
           .get();
-      print('Firestore query count for ${email.trim()}: ${query.docs.length}');
       return query.docs.isNotEmpty;
     } catch (e) {
-      print('Firestore email check error: $e');
+      debugPrint('Firestore email check error: $e');
       return false;
     }
   }

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:project_mobileshop/core/utils/format_utils.dart';
+import 'package:project_mobileshop/core/widgets/product_image.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
 import 'package:project_mobileshop/features/cart/providers/cart_provider.dart';
@@ -210,7 +212,12 @@ class _CartScreenState extends State<CartScreen> {
               color: AppColors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: _buildCartItemImage(item),
+            child: ProductImage(
+              product: item,
+              emoji: item['emoji'] as String? ?? '✨',
+              emojiSize: 32,
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -243,7 +250,7 @@ class _CartScreenState extends State<CartScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${_formatPrice(itemPrice * itemQuantity)}đ',
+                      '${formatVnd(itemPrice * itemQuantity)}đ',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -384,7 +391,7 @@ class _CartScreenState extends State<CartScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'Mã giảm giá đã được áp dụng! Tiết kiệm ${_formatPrice(discount)}đ',
+                'Mã giảm giá đã được áp dụng! Tiết kiệm ${formatVnd(discount)}đ',
                 style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.success,
@@ -439,7 +446,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ),
               Text(
-                '${_formatPrice(total)}đ',
+                '${formatVnd(total)}đ',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -480,7 +487,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 )
               : Text(
-                  '${isDiscount ? '-' : ''}${_formatPrice(amount.abs())}đ',
+                  '${isDiscount ? '-' : ''}${formatVnd(amount.abs())}đ',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -547,7 +554,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  '${_formatPrice(total)}đ',
+                  '${formatVnd(total)}đ',
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, fontFamily: 'DM Sans'),
                 ),
               ],
@@ -556,13 +563,6 @@ class _CartScreenState extends State<CartScreen> {
         ),
       ),
     );
-  }
-
-  String _formatPrice(int price) {
-    return price.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]}.',
-        );
   }
 
   Widget _buildSuggestionsSection() {
@@ -634,50 +634,4 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildCartItemImage(Map<String, dynamic> item) {
-    final images = item['images'];
-    String? imageUrl;
-    if (images is List && images.isNotEmpty) {
-      imageUrl = images.first?.toString();
-    } else if (item['image_url'] != null) {
-      imageUrl = item['image_url'].toString();
-    }
-    final emoji = item['emoji'] as String? ?? '✨';
-
-    if (imageUrl != null && imageUrl.startsWith('http')) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          imageUrl,
-          width: double.infinity,
-          height: double.infinity,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Center(
-              child: Text(
-                emoji,
-                style: const TextStyle(fontSize: 32),
-              ),
-            );
-          },
-        ),
-      );
-    }
-    return Center(
-      child: Text(
-        emoji,
-        style: const TextStyle(fontSize: 32),
-      ),
-    );
-  }
 }

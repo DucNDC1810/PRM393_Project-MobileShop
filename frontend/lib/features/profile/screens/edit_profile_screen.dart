@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -46,13 +47,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final downloadUrl = await snapshot.ref.getDownloadURL();
       return downloadUrl;
     } catch (e) {
-      print('Firebase Storage upload failed: $e. Falling back to Base64...');
+      debugPrint('Firebase Storage upload failed: $e. Falling back to Base64...');
       try {
         final bytes = await file.readAsBytes();
         final base64String = base64Encode(bytes);
         return 'data:image/jpeg;base64,$base64String';
       } catch (err) {
-        print('Base64 fallback failed: $err');
+        debugPrint('Base64 fallback failed: $err');
       }
       return null;
     }
