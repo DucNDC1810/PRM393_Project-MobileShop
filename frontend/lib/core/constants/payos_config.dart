@@ -14,7 +14,7 @@ class PayOSConfig {
   // ==========================================
   static const String payoutClientId = "8d95381f-2ea5-45da-8a29-cdae63252c02";
   static const String payoutApiKey = "a15d9d16-2713-4f19-bf0f-bffe66f04fdc";
-  static const String payoutChecksumKey = "cc83d1946bd20a2aba0e9082fd5dba0777e10630b489ccc66b682da25a60623c";
+  static const String payoutChecksumKey = "00b0479b736e30fb832b4c480d3ce4cd845b0b81548d889becca6656fae3cadb";
 
   // URL trả về sau khi thanh toán (Dùng tạm URL web nếu chưa có deep link)
   static const String returnUrl = "https://hub.payos.vn";
