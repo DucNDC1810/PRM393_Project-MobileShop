@@ -9,7 +9,7 @@ import 'package:project_mobileshop/core/widgets/shop_logo.dart';
 import 'package:project_mobileshop/features/auth/screens/login_screen.dart';
 import 'package:project_mobileshop/features/order/screens/my_orders_screen.dart';
 import 'package:project_mobileshop/features/profile/screens/store_location_screen.dart';
-import 'package:project_mobileshop/features/notifications/screens/notifications_screen.dart';
+import 'package:project_mobileshop/features/notification/screens/notification_screen.dart';
 import 'package:project_mobileshop/features/chat/screens/chat_screen.dart';
 import 'package:project_mobileshop/features/profile/screens/edit_profile_screen.dart';
 import 'package:project_mobileshop/features/auth/screens/change_password_screen.dart';
@@ -171,7 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildMenuSection('Cài đặt', [
                   _MenuItem(Icons.notifications_outlined, 'Thông báo', () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                      MaterialPageRoute(builder: (_) => const NotificationScreen()),
                     );
                   }),
                   _MenuItem(Icons.lock_outline, 'Bảo mật', () {
