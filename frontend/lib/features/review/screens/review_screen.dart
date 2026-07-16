@@ -106,6 +106,31 @@ class _ReviewSheetState extends State<_ReviewSheet> {
 
     try {
       await batch.commit();
+
+      // Cập nhật rating + review count trên product document
+      final reviewedProductIds = <String>{};
+      for (int i = 0; i < widget.items.length; i++) {
+        final item = widget.items[i] as Map<String, dynamic>;
+        final productId = item['id'] as String? ?? '';
+        if (productId.isEmpty || _alreadyReviewed.contains(productId)) continue;
+        reviewedProductIds.add(productId);
+      }
+      for (final pid in reviewedProductIds) {
+        final snap = await FirebaseFirestore.instance
+            .collection('reviews')
+            .where('product_id', isEqualTo: pid)
+            .get();
+        if (snap.docs.isEmpty) continue;
+        final stars = snap.docs
+            .map((d) => (d.data()['stars'] as num?)?.toDouble() ?? 0)
+            .toList();
+        final avg = stars.reduce((a, b) => a + b) / stars.length;
+        await FirebaseFirestore.instance.collection('products').doc(pid).update({
+          'rating': double.parse(avg.toStringAsFixed(1)),
+          'reviews': stars.length,
+        });
+      }
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(

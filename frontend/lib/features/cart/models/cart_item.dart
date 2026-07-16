@@ -8,6 +8,7 @@ class CartItem {
   int quantity;
   final List<String>? images;
   final String? imageUrl;
+  final int stock;
 
   CartItem({
     required this.id,
@@ -19,6 +20,7 @@ class CartItem {
     required this.quantity,
     this.images,
     this.imageUrl,
+    this.stock = 999,
   });
 
   int get subtotal => price * quantity;
@@ -33,6 +35,7 @@ class CartItem {
         quantity: quantity ?? this.quantity,
         images: images,
         imageUrl: imageUrl,
+        stock: stock,
       );
 
   Map<String, dynamic> toMap() => {
@@ -45,5 +48,6 @@ class CartItem {
         'quantity': quantity,
         'images': images,
         'image_url': imageUrl,
+        'stock': stock,
       };
 }

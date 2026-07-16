@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -34,12 +35,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _monthlyOrderCount = 0;
   double _monthlySpent = 0;
   DateTime _periodEnd = DateTime.now();
+  int _chatUnread = 0;
+  Stream<DocumentSnapshot>? _chatUnreadStream;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final user = context.read<AuthProvider>().user;
-    if (user != null) _fetchStats(user.uid);
+    if (user != null) {
+      _fetchStats(user.uid);
+      if (_chatUnreadStream == null) {
+        _chatUnreadStream = FirebaseFirestore.instance
+            .collection('conversations')
+            .doc(user.uid)
+            .snapshots();
+        _chatUnreadStream!.listen((snap) {
+          if (!mounted) return;
+          final data = snap.data() as Map<String, dynamic>?;
+          setState(() {
+            _chatUnread = (data?['unreadByUser'] as num?)?.toInt() ?? 0;
+          });
+        });
+      }
+    }
   }
 
   Future<void> _fetchStats(String uid) async {
@@ -142,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ChatScreen()),
                     );
-                  }),
+                  }, badge: _chatUnread),
                 ]),
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -616,8 +634,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         fontFamily: 'DM Sans',
                       ),
                     ),
-                    trailing: const Icon(Icons.chevron_right,
-                        color: AppColors.onSurfaceVariant, size: 20),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (e.value.badge > 0)
+                          Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              e.value.badge > 99 ? '99+' : '${e.value.badge}',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        const Icon(Icons.chevron_right,
+                            color: AppColors.onSurfaceVariant, size: 20),
+                      ],
+                    ),
                     onTap: e.value.onTap,
                   ),
                 ),
@@ -640,7 +677,8 @@ class _MenuItem {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _MenuItem(this.icon, this.label, this.onTap);
+  final int badge;
+  const _MenuItem(this.icon, this.label, this.onTap, {this.badge = 0});
 }
 
 enum _MemberRank { bronze, silver, gold, diamond }

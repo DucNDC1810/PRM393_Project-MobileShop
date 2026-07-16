@@ -7,6 +7,7 @@ import 'package:project_mobileshop/core/utils/format_utils.dart';
 import 'package:project_mobileshop/features/chat/screens/chat_screen.dart';
 import 'package:project_mobileshop/features/review/screens/review_screen.dart';
 import 'package:project_mobileshop/features/wallet/services/payos_service.dart';
+import 'package:project_mobileshop/features/order/screens/order_detail_screen.dart';
 import 'package:project_mobileshop/features/order/screens/payment_waiting_screen.dart';
 
 class MyOrdersScreen extends StatefulWidget {
@@ -141,7 +142,16 @@ class _OrderCard extends StatelessWidget {
     final dateStr =
         createdAt != null ? formatDate(createdAt.toDate()) : 'Vừa xong';
 
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OrderDetailScreen(
+            docId: orderDoc.id,
+            order: Map<String, dynamic>.from(order),
+          ),
+        ),
+      ),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -182,6 +192,7 @@ class _OrderCard extends StatelessWidget {
             qrCode: qrCode,
           ),
         ],
+      ),
       ),
     );
   }
@@ -772,6 +783,49 @@ class _OrderFooterState extends State<_OrderFooter> {
                         borderRadius: BorderRadius.circular(20)),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     elevation: 0,
+                  ),
+                ),
+              ),
+            ] else if (status == 'Chờ xử lý' || status == 'Đã xác nhận') ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _showTrackingDialog(
+                      context, status, widget.orderId, widget.dateStr),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Theo dõi đơn',
+                    style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _isLoading ? null : _cancelOrder,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  child: const Text(
+                    'Hủy đơn',
+                    style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

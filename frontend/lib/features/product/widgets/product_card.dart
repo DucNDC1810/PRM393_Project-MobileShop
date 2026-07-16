@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/core/utils/format_utils.dart';
@@ -161,27 +162,46 @@ class ProductCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, size: 12, color: Color(0xFFFBC02D)),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${p.rating}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.onSurface,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${p.reviews})',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                    FutureBuilder<QuerySnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('reviews')
+                          .where('product_id', isEqualTo: p.id)
+                          .get(),
+                      builder: (context, snap) {
+                        double avgRating = p.rating;
+                        int reviewCount = p.reviews;
+                        if (snap.hasData && snap.data!.docs.isNotEmpty) {
+                          final docs = snap.data!.docs;
+                          final total = docs.fold<double>(
+                              0,
+                              (s, d) =>
+                                  s + ((d.data() as Map)['stars'] as num? ?? 0).toDouble());
+                          avgRating = total / docs.length;
+                          reviewCount = docs.length;
+                        }
+                        return Row(
+                          children: [
+                            const Icon(Icons.star, size: 12, color: Color(0xFFFBC02D)),
+                            const SizedBox(width: 2),
+                            Text(
+                              avgRating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.onSurface,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '($reviewCount)',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     const Spacer(),
                     Row(

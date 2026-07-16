@@ -20,6 +20,7 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  Stream<int>? _totalUnreadStream;
 
   @override
   void initState() {
@@ -28,6 +29,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().loadProducts();
     });
+    _totalUnreadStream = FirebaseFirestore.instance
+        .collection('conversations')
+        .snapshots()
+        .map((snap) => snap.docs.fold<int>(
+            0, (sum, d) => sum + ((d.data()['unreadByAdmin'] as num?)?.toInt() ?? 0)));
   }
 
   @override
@@ -83,10 +89,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           indicatorColor: AppColors.primary,
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'DM Sans'),
-          tabs: const [
-            Tab(text: 'Kho hàng'),
-            Tab(text: 'Đơn hàng'),
-            Tab(text: 'Hỗ trợ'),
+          tabs: [
+            const Tab(text: 'Kho hàng'),
+            const Tab(text: 'Đơn hàng'),
+            Tab(
+              child: StreamBuilder<int>(
+                stream: _totalUnreadStream,
+                builder: (context, snap) {
+                  final count = snap.data ?? 0;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Text('Hỗ trợ', style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'DM Sans')),
+                      ),
+                      if (count > 0)
+                        Positioned(
+                          top: -6,
+                          right: -10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              count > 99 ? '99+' : '$count',
+                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -219,7 +257,7 @@ class _InventoryTab extends StatelessWidget {
   }
 }
 
-class _AdminProductCard extends StatelessWidget {
+class _AdminProductCard extends StatefulWidget {
   final Product product;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -227,8 +265,85 @@ class _AdminProductCard extends StatelessWidget {
   const _AdminProductCard({required this.product, required this.onEdit, required this.onDelete});
 
   @override
+  State<_AdminProductCard> createState() => _AdminProductCardState();
+}
+
+class _AdminProductCardState extends State<_AdminProductCard> {
+  late int _stock;
+
+  @override
+  void initState() {
+    super.initState();
+    _stock = widget.product.stock;
+  }
+
+  Future<void> _editStock() async {
+    final ctrl = TextEditingController(text: '$_stock');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Chỉnh số lượng tồn kho',
+            style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold, fontSize: 16)),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'Số lượng',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            prefixIcon: const Icon(Icons.inventory_2_outlined),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = int.tryParse(ctrl.text.trim());
+              if (val != null && val >= 0) Navigator.pop(ctx, val);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Lưu', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || !mounted) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(widget.product.id)
+          .update({'stock': result});
+      setState(() => _stock = result);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã cập nhật tồn kho: $result sản phẩm',
+                style: const TextStyle(fontFamily: 'DM Sans')),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cập nhật thất bại!'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isLowStock = product.stock < 10;
+    final isLowStock = _stock < 10;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
@@ -241,9 +356,9 @@ class _AdminProductCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: product.images.isNotEmpty
+            child: widget.product.images.isNotEmpty
                 ? Image.network(
-                    product.images.first,
+                    widget.product.images.first,
                     width: 70, height: 70, fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
                       width: 70, height: 70, color: Colors.grey.shade200,
@@ -255,37 +370,75 @@ class _AdminProductCard extends StatelessWidget {
                     child: const Icon(Icons.image, color: Colors.grey),
                   ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  product.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.primary),
+                  widget.product.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.primary),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  '${formatVnd(widget.product.activePrice)}đ',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey.shade600),
+                ),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Text(
-                      '${formatVnd(product.activePrice)}đ',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isLowStock ? const Color(0xFFFFE5E5) : const Color(0xFFEBE3DF),
-                        borderRadius: BorderRadius.circular(12),
+                // Stock badge — tap để sửa
+                GestureDetector(
+                  onTap: _editStock,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _stock == 0
+                          ? const Color(0xFFFFE5E5)
+                          : isLowStock
+                              ? const Color(0xFFFFF3CD)
+                              : const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _stock == 0
+                            ? Colors.red.shade200
+                            : isLowStock
+                                ? Colors.orange.shade200
+                                : Colors.green.shade200,
                       ),
-                      child: Text(
-                        isLowStock ? 'Low Stock: ${product.stock}' : 'Stock: ${product.stock}',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-                          color: isLowStock ? Colors.red.shade700 : AppColors.primary),
-                      ),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.inventory_2_outlined,
+                            size: 11,
+                            color: _stock == 0
+                                ? Colors.red.shade700
+                                : isLowStock
+                                    ? Colors.orange.shade700
+                                    : Colors.green.shade700),
+                        const SizedBox(width: 4),
+                        Text(
+                          _stock == 0 ? 'Hết hàng' : 'Tồn: $_stock',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'DM Sans',
+                              color: _stock == 0
+                                  ? Colors.red.shade700
+                                  : isLowStock
+                                      ? Colors.orange.shade700
+                                      : Colors.green.shade700),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.edit, size: 10,
+                            color: _stock == 0
+                                ? Colors.red.shade400
+                                : isLowStock
+                                    ? Colors.orange.shade400
+                                    : Colors.green.shade400),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -294,14 +447,14 @@ class _AdminProductCard extends StatelessWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 22),
-                onPressed: onEdit,
+                onPressed: widget.onEdit,
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(4),
               ),
               const SizedBox(height: 8),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: AppColors.primary, size: 22),
-                onPressed: onDelete,
+                onPressed: widget.onDelete,
                 constraints: const BoxConstraints(),
                 padding: const EdgeInsets.all(4),
               ),

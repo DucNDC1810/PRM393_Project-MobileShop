@@ -196,6 +196,7 @@ class _CartScreenState extends State<CartScreen> {
     final String id = item['id'] as String;
     final int itemPrice = item['price'] as int;
     final int itemQuantity = item['quantity'] as int;
+    final int itemStock = (item['stock'] as num? ?? 999).toInt();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -247,7 +248,49 @@ class _CartScreenState extends State<CartScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
+                // Badge tồn kho
+                if (itemStock < 999)
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: itemStock <= 0
+                              ? Colors.red.shade50
+                              : itemStock <= 10
+                                  ? Colors.orange.shade50
+                                  : Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: itemStock <= 0
+                                ? Colors.red.shade200
+                                : itemStock <= 10
+                                    ? Colors.orange.shade200
+                                    : Colors.green.shade200,
+                          ),
+                        ),
+                        child: Text(
+                          itemStock <= 0
+                              ? 'Hết hàng'
+                              : itemStock <= 10
+                                  ? 'Còn $itemStock sản phẩm'
+                                  : 'Còn $itemStock sản phẩm',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'DM Sans',
+                            color: itemStock <= 0
+                                ? Colors.red.shade700
+                                : itemStock <= 10
+                                    ? Colors.orange.shade700
+                                    : Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -280,7 +323,9 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                         _quantityButton(
                           Icons.add,
-                          () => cart.updateQuantity(id, itemQuantity + 1),
+                          itemQuantity >= itemStock
+                              ? null
+                              : () => cart.updateQuantity(id, itemQuantity + 1),
                         ),
                       ],
                     ),
@@ -294,18 +339,19 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _quantityButton(IconData icon, VoidCallback onTap) {
+  Widget _quantityButton(IconData icon, VoidCallback? onTap) {
+    final disabled = onTap == null;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.outlineVariant),
+          border: Border.all(color: disabled ? AppColors.outlineVariant.withValues(alpha: 0.4) : AppColors.outlineVariant),
           borderRadius: BorderRadius.circular(8),
-          color: AppColors.surface,
+          color: disabled ? AppColors.surfaceContainerLow : AppColors.surface,
         ),
-        child: Icon(icon, size: 16, color: AppColors.primary),
+        child: Icon(icon, size: 16, color: disabled ? AppColors.onSurfaceVariant.withValues(alpha: 0.4) : AppColors.primary),
       ),
     );
   }

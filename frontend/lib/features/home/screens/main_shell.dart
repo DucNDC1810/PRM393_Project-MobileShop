@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
@@ -24,6 +25,8 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
   String? _lastUid;
+  int _chatUnread = 0;
+  Stream<DocumentSnapshot>? _chatStream;
 
   @override
   void didChangeDependencies() {
@@ -32,6 +35,17 @@ class _MainShellState extends State<MainShell> {
     if (uid != null && uid != _lastUid) {
       _lastUid = uid;
       context.read<FavoritesProvider>().loadForUser(uid);
+      _chatStream = FirebaseFirestore.instance
+          .collection('conversations')
+          .doc(uid)
+          .snapshots();
+      _chatStream!.listen((snap) {
+        if (!mounted) return;
+        final data = snap.data() as Map<String, dynamic>?;
+        setState(() {
+          _chatUnread = (data?['unreadByUser'] as num?)?.toInt() ?? 0;
+        });
+      });
     }
   }
 
@@ -104,7 +118,8 @@ class _MainShellState extends State<MainShell> {
                   badge: favCount > 0 ? favCount : null, isLoggedIn: isLoggedIn),
               _navItem(3, Icons.shopping_bag_outlined, Icons.shopping_bag, 'Cart',
                   badge: cartCount > 0 ? cartCount : null, isLoggedIn: isLoggedIn),
-              _navItem(4, Icons.person_outline, Icons.person, 'Profile', isLoggedIn: isLoggedIn),
+              _navItem(4, Icons.person_outline, Icons.person, 'Profile',
+                  badge: _chatUnread > 0 ? _chatUnread : null, isLoggedIn: isLoggedIn),
             ],
           ),
         ),

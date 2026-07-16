@@ -20,10 +20,10 @@ class CartProvider extends ChangeNotifier {
 
   void addItem(Map<String, dynamic> product, {int quantity = 1}) {
     final id = product['id'] as String;
+    final int stock = (product['stock'] as num? ?? 999).toInt();
     if (_items.containsKey(id)) {
-      _items[id] = _items[id]!.copyWith(
-        quantity: _items[id]!.quantity + quantity,
-      );
+      final newQty = (_items[id]!.quantity + quantity).clamp(1, stock);
+      _items[id] = _items[id]!.copyWith(quantity: newQty);
     } else {
       final num priceVal = product['price'] as num? ?? 0;
       final num salePriceVal = product['sale_price'] as num? ?? 0;
@@ -37,11 +37,12 @@ class CartProvider extends ChangeNotifier {
         emoji: product['emoji'] as String? ?? '✨',
         category: product['category'] as String? ?? '',
         price: activePrice,
-        quantity: quantity,
+        quantity: quantity.clamp(1, stock),
         images: product['images'] != null
             ? List<String>.from(product['images'] as List)
             : null,
         imageUrl: product['image_url'] as String?,
+        stock: stock,
       );
     }
     notifyListeners();
@@ -51,7 +52,8 @@ class CartProvider extends ChangeNotifier {
     if (quantity <= 0) {
       _items.remove(id);
     } else if (_items.containsKey(id)) {
-      _items[id] = _items[id]!.copyWith(quantity: quantity);
+      final stock = _items[id]!.stock;
+      _items[id] = _items[id]!.copyWith(quantity: quantity.clamp(1, stock));
     }
     notifyListeners();
   }

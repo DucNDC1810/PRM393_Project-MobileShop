@@ -17,7 +17,7 @@ class NotificationService {
       'type': type,
       'is_read': false,
       'created_at': FieldValue.serverTimestamp(),
-      ...?extra,
+      if (extra != null) 'extra': extra,
     });
   }
 

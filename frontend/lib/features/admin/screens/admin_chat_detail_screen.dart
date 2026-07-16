@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
+import 'package:project_mobileshop/features/notification/services/notification_service.dart';
 
 class AdminChatDetailScreen extends StatefulWidget {
   final String userId;
@@ -104,10 +105,19 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
       'lastMessage': text,
       'lastMessageTime': FieldValue.serverTimestamp(),
       'unreadByAdmin': 0,
+      'unreadByUser': FieldValue.increment(1),
     });
 
     await batch.commit();
     _scrollToBottom();
+
+    // Push notification cho user
+    await NotificationService.push(
+      userUid: widget.userId,
+      title: 'Beauty & Glow Hỗ trợ 💬',
+      body: text.length > 80 ? '${text.substring(0, 80)}...' : text,
+      type: 'chat',
+    );
   }
 
   void _scrollToBottom() {

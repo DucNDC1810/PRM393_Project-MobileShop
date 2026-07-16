@@ -85,7 +85,11 @@ class _ChatScreenState extends State<ChatScreen> {
         'lastMessage': '',
         'lastMessageTime': FieldValue.serverTimestamp(),
         'unreadByAdmin': 0,
+        'unreadByUser': 0,
       });
+    } else {
+      // Reset unread khi user mở chat
+      await _db.collection('conversations').doc(_userId).update({'unreadByUser': 0});
     }
   }
 

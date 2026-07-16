@@ -123,41 +123,92 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Rating Row
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: Color(0xFFFBC02D), size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${p.rating}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface,
-                        ),
+                  // Stock badge
+                  if (p.stock <= 0)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorContainer,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '(${p.reviews} đánh giá)',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.onSurfaceVariant,
-                          fontFamily: 'DM Sans',
-                        ),
+                      child: const Text('Hết hàng', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700, fontSize: 12, fontFamily: 'DM Sans')),
+                    )
+                  else if (p.stock <= 10)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                      const Spacer(),
-                      const Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Chính hãng',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'DM Sans',
-                        ),
+                      child: Text('Chỉ còn ${p.stock} sản phẩm', style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.w700, fontSize: 12, fontFamily: 'DM Sans')),
+                    )
+                  else
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    ],
+                      child: Text('Còn ${p.stock} sản phẩm', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w700, fontSize: 12, fontFamily: 'DM Sans')),
+                    ),
+
+                  // Rating Row — dùng số thực từ Firestore
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('reviews')
+                        .where('product_id', isEqualTo: p.id)
+                        .snapshots(),
+                    builder: (context, snap) {
+                      final reviewDocs = snap.data?.docs ?? [];
+                      final count = reviewDocs.length;
+                      double avg = 0;
+                      if (count > 0) {
+                        final total = reviewDocs.fold<int>(
+                            0, (s, d) => s + ((d.data() as Map)['stars'] as int? ?? 5));
+                        avg = total / count;
+                      }
+                      final displayRating = count > 0 ? avg.toStringAsFixed(1) : p.rating.toStringAsFixed(1);
+                      final displayCount = count > 0 ? count : p.reviews;
+
+                      return Row(
+                        children: [
+                          const Icon(Icons.star, color: Color(0xFFFBC02D), size: 18),
+                          const SizedBox(width: 4),
+                          Text(
+                            displayRating,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.onSurface,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '($displayCount đánh giá)',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.onSurfaceVariant,
+                              fontFamily: 'DM Sans',
+                            ),
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.check_circle_outline, color: Colors.green, size: 16),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'Chính hãng',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'DM Sans',
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   const Divider(color: AppColors.outlineVariant),
@@ -375,13 +426,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: SizedBox(
                   height: 48,
                   child: OutlinedButton(
-                    onPressed: () {
+                    onPressed: p.stock > 0 ? () {
                       context.read<CartProvider>().addItem(p.toMap(), quantity: _quantity);
                       CustomToast.showSuccess(
                         context,
                         'Đã thêm $_quantity x ${p.name} vào giỏ hàng.',
                       );
-                    },
+                    } : null,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.primary,
                       side: const BorderSide(color: AppColors.primary, width: 1.5),
@@ -407,12 +458,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: SizedBox(
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: p.stock > 0 ? () {
                       context.read<CartProvider>().addItem(p.toMap(), quantity: _quantity);
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const CheckoutScreen()),
                       );
-                    },
+                    } : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.onPrimary,
@@ -553,8 +604,6 @@ class _ReviewsSection extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('reviews')
           .where('product_id', isEqualTo: productId)
-          .orderBy('created_at', descending: true)
-          .limit(20)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -564,7 +613,17 @@ class _ReviewsSection extends StatelessWidget {
           );
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        if (snapshot.hasError) {
+          debugPrint('Reviews query error: ${snapshot.error}');
+        }
+
+        final docs = snapshot.data?.docs.toList() ?? [];
+        docs.sort((a, b) {
+          final aT = (a.data() as Map)['created_at'] as Timestamp?;
+          final bT = (b.data() as Map)['created_at'] as Timestamp?;
+          if (aT == null || bT == null) return 0;
+          return bT.compareTo(aT);
+        });
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

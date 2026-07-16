@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:project_mobileshop/features/auth/providers/auth_provider.dart';
 import 'package:project_mobileshop/core/theme/app_theme.dart';
+import 'package:project_mobileshop/features/notification/screens/notification_detail_screen.dart';
+import 'package:project_mobileshop/features/order/screens/order_detail_screen.dart';
+import 'package:project_mobileshop/features/chat/screens/chat_screen.dart';
 
 class NotificationScreen extends StatelessWidget {
   const NotificationScreen({super.key});
@@ -106,6 +109,14 @@ class NotificationScreen extends StatelessWidget {
               final type = data['type'] as String? ?? 'order';
               final createdAt = (data['created_at'] as Timestamp?)?.toDate();
 
+              // extra có thể là nested map hoặc top-level (backward compat với data cũ dùng ...?extra)
+              final extraRaw = data['extra'];
+              final extra = extraRaw is Map<String, dynamic>
+                  ? extraRaw
+                  : <String, dynamic>{
+                      if (data['order_id'] != null) 'order_id': data['order_id'],
+                    };
+
               return _NotificationTile(
                 title: title,
                 body: body,
@@ -114,6 +125,53 @@ class NotificationScreen extends StatelessWidget {
                 createdAt: createdAt,
                 onTap: () async {
                   await docs[index].reference.update({'is_read': true});
+                  if (!context.mounted) return;
+
+                  // Nếu là thông báo chat → mở màn hình chat
+                  if (type == 'chat') {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ChatScreen()),
+                    );
+                    return;
+                  }
+
+                  // Nếu là thông báo đơn hàng và có order_id → navigate thẳng đến đơn
+                  final orderId = extra['order_id'] as String?;
+                  if (type == 'order' && orderId != null && orderId.isNotEmpty) {
+                    try {
+                      final orderDoc = await FirebaseFirestore.instance
+                          .collection('orders')
+                          .doc(orderId)
+                          .get();
+                      if (orderDoc.exists && context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => OrderDetailScreen(
+                              docId: orderId,
+                              order: Map<String, dynamic>.from(
+                                  orderDoc.data() as Map<String, dynamic>),
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                    } catch (_) {}
+                  }
+
+                  // Fallback: mở trang chi tiết thông báo
+                  if (context.mounted) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => NotificationDetailScreen(
+                          title: title,
+                          body: body,
+                          type: type,
+                          createdAt: createdAt,
+                          extra: extra,
+                        ),
+                      ),
+                    );
+                  }
                 },
               );
             },
@@ -146,6 +204,7 @@ class _NotificationTile extends StatelessWidget {
       case 'order': return Icons.shopping_bag_outlined;
       case 'wallet': return Icons.account_balance_wallet_outlined;
       case 'promo': return Icons.local_offer_outlined;
+      case 'chat': return Icons.chat_bubble_outline_rounded;
       default: return Icons.notifications_outlined;
     }
   }
@@ -155,6 +214,7 @@ class _NotificationTile extends StatelessWidget {
       case 'order': return AppColors.primary;
       case 'wallet': return Colors.orange;
       case 'promo': return Colors.green;
+      case 'chat': return Colors.teal;
       default: return Colors.blue;
     }
   }
